@@ -22,6 +22,8 @@ public class ActivityCreateRequest implements Serializable {
     private LocalDateTime startTime;
     
     private LocalDateTime endTime;
+
+    private LocalDateTime registrationStartTime;
     
     private LocalDateTime registrationDeadline;
     

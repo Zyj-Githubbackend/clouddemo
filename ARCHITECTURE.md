@@ -93,7 +93,7 @@
 ```
 cloud-demo/
 ├── database/                      # 数据库脚本
-│   └── init.sql                   # 初始化脚本
+│   └── init.sql                   # 全量初始化（DROP/CREATE 库、表、视图、示例数据）
 ├── logs/                          # 日志目录
 ├── services/                      # 服务模块
 │   ├── pom.xml                    # 微服务父 POM（子模块：common + 各服务）
@@ -289,7 +289,7 @@ Prompt: "请为校园志愿活动生成招募文案..."
 ```bash
 1. 启动Nacos (单机模式)
 2. 启动MySQL + Redis
-3. 执行init.sql
+3. 执行 database/init.sql（将删除并重建 volunteer_platform，仅一个 SQL 文件）
 4. 启动各服务 (mvn spring-boot:run)
 ```
 

@@ -64,7 +64,7 @@
 - [ ] `.gitignore`
 
 ### 数据库文件
-- [ ] `database/init.sql`
+- [ ] `database/init.sql`（唯一全量脚本：DROP/CREATE 库、表、视图、示例数据）
 
 ### 文档文件
 - [ ] `README.md`
@@ -147,17 +147,18 @@
   SHOW DATABASES LIKE 'volunteer%';
   ```
 
-- [ ] 数据表已创建（3张表）
+- [ ] 数据表与视图已创建（3 张表 + 1 个视图）
   ```sql
   USE volunteer_platform;
   SHOW TABLES;
-  # 应看到: sys_user, vol_activity, vol_registration
+  # 应看到: sys_user, vol_activity, vol_registration, v_activity_statistics
   ```
 
 - [ ] 测试数据已插入
   ```sql
-  SELECT COUNT(*) FROM sys_user;     -- 应该有3条
-  SELECT COUNT(*) FROM vol_activity; -- 应该有5条
+  SELECT COUNT(*) FROM sys_user;           -- 3 条
+  SELECT COUNT(*) FROM vol_activity;      -- 7 条
+  SELECT COUNT(*) FROM vol_registration;  -- 4 条
   ```
 
 ---
@@ -262,7 +263,7 @@ curl -X POST http://localhost:9000/user/login \
 ```bash
 curl http://localhost:9000/activity/list?page=1&size=10
 ```
-- [ ] 返回: code=200, 包含5条活动数据
+- [ ] 返回: code=200, `data.total` 为 7（与 init.sql 示例活动条数一致）
 
 #### 用户信息接口（需要登录）
 ```bash

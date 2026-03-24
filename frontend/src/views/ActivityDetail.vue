@@ -5,9 +5,14 @@
         <template #header>
           <div class="header">
             <h2>{{ activity.title }}</h2>
-            <el-tag :type="getStatusType(activity.status)" size="large">
-              {{ getStatusText(activity.status) }}
-            </el-tag>
+            <div class="header-tags">
+              <el-tag :type="getStatusType(activity.status)" size="large">
+                {{ getStatusText(activity.status) }}
+              </el-tag>
+              <el-tag :type="recruitmentDisplay.type" size="large">
+                {{ recruitmentDisplay.text }}
+              </el-tag>
+            </div>
           </div>
         </template>
 
@@ -32,6 +37,9 @@
           <el-descriptions-item label="活动时间">
             {{ formatDate(activity.startTime) }} 至 {{ formatDate(activity.endTime) }}
           </el-descriptions-item>
+          <el-descriptions-item label="招募开始">
+            {{ activity.registrationStartTime ? formatDate(activity.registrationStartTime) : '—' }}
+          </el-descriptions-item>
           <el-descriptions-item label="报名截止">
             {{ formatDate(activity.registrationDeadline) }}
           </el-descriptions-item>
@@ -50,7 +58,7 @@
 
         <div class="action-section">
           <el-button 
-            v-if="!activity.isRegistered && activity.status === 'RECRUITING'" 
+            v-if="canRegister" 
             type="primary" 
             size="large"
             @click="handleRegister"
@@ -73,17 +81,28 @@
 </template>
 
 <script setup>
-import { ref, onMounted } from 'vue'
+import { ref, computed, onMounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
 import Layout from '@/components/Layout.vue'
 import { getActivityDetail, registerActivity } from '@/api/activity'
+import { getRecruitmentDisplay } from '@/utils/recruitment'
 import dayjs from 'dayjs'
 
 const route = useRoute()
 const router = useRouter()
 const loading = ref(false)
 const activity = ref({})
+
+const recruitmentDisplay = computed(() => getRecruitmentDisplay(activity.value))
+const canRegister = computed(() => {
+  const a = activity.value
+  return (
+    !a.isRegistered
+    && a.status === 'RECRUITING'
+    && recruitmentDisplay.value.text === '招募中'
+  )
+})
 
 const formatDate = (date) => {
   return dayjs(date).format('YYYY-MM-DD HH:mm')
@@ -149,6 +168,13 @@ onMounted(() => {
 
 .header h2 {
   margin: 0;
+}
+
+.header-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  justify-content: flex-end;
 }
 
 .description-section {

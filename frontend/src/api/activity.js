@@ -1,11 +1,18 @@
 import request from '@/utils/request'
 
-// 获取活动列表
-export const getActivityList = (params) => {
+// 获取活动列表（空字符串 status/category 不传，避免后端按 "" 精确匹配导致无数据）
+export const getActivityList = (params = {}) => {
+  const q = {
+    page: params.page ?? 1,
+    size: params.size ?? 10
+  }
+  if (params.status) q.status = params.status
+  if (params.category) q.category = params.category
+  if (params.recruitmentPhase) q.recruitmentPhase = params.recruitmentPhase
   return request({
     url: '/activity/list',
     method: 'get',
-    params
+    params: q
   })
 }
 
@@ -14,6 +21,14 @@ export const getActivityDetail = (id) => {
   return request({
     url: `/activity/${id}`,
     method: 'get'
+  })
+}
+
+// 管理员删除活动
+export const deleteActivity = (id) => {
+  return request({
+    url: `/activity/${id}`,
+    method: 'delete'
   })
 }
 

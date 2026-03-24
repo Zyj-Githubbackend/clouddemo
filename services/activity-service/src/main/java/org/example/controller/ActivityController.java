@@ -30,9 +30,10 @@ public class ActivityController {
             @RequestParam(defaultValue = "10") Integer size,
             @RequestParam(required = false) String status,
             @RequestParam(required = false) String category,
+            @RequestParam(required = false) String recruitmentPhase,
             @RequestHeader(value = "X-User-Id", required = false) Long userId) {
         
-        IPage<ActivityVO> activities = activityService.listActivities(page, size, status, category, userId);
+        IPage<ActivityVO> activities = activityService.listActivities(page, size, status, category, recruitmentPhase, userId);
         return Result.success(activities);
     }
     
@@ -132,5 +133,17 @@ public class ActivityController {
 
         ActivityVO activity = activityService.getActivityDetail(id, userId);
         return Result.success(activity);
+    }
+
+    @DeleteMapping("/{id}")
+    public Result<Void> deleteActivity(
+            @PathVariable Long id,
+            @RequestHeader("X-User-Role") String role) {
+
+        if (!"ADMIN".equals(role)) {
+            return Result.forbidden("只有管理员才能删除活动");
+        }
+        activityService.deleteActivity(id);
+        return Result.success();
     }
 }

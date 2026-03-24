@@ -18,6 +18,11 @@
                 <el-option label="校友招商" value="校友招商" />
                 <el-option label="暖冬行动" value="暖冬行动" />
               </el-select>
+              <el-select v-model="filters.recruitmentPhase" placeholder="招募阶段" clearable @change="handleSearch">
+                <el-option label="未开始" value="NOT_STARTED" />
+                <el-option label="招募中" value="RECRUITING" />
+                <el-option label="已结束" value="ENDED" />
+              </el-select>
             </div>
           </div>
         </template>
@@ -45,10 +50,10 @@
               {{ formatDate(row.startTime) }}
             </template>
           </el-table-column>
-          <el-table-column label="状态" width="100">
+          <el-table-column label="招募状态" width="100">
             <template #default="{ row }">
-              <el-tag :type="getStatusType(row.status)">
-                {{ getStatusText(row.status) }}
+              <el-tag :type="getRecruitmentDisplay(row).type">
+                {{ getRecruitmentDisplay(row).text }}
               </el-tag>
             </template>
           </el-table-column>
@@ -82,6 +87,7 @@ import { ref, reactive, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import Layout from '@/components/Layout.vue'
 import { getActivityList } from '@/api/activity'
+import { getRecruitmentDisplay } from '@/utils/recruitment'
 import dayjs from 'dayjs'
 
 const router = useRouter()
@@ -90,7 +96,8 @@ const activities = ref([])
 
 const filters = reactive({
   status: '',
-  category: ''
+  category: '',
+  recruitmentPhase: ''
 })
 
 const pagination = reactive({
@@ -101,24 +108,6 @@ const pagination = reactive({
 
 const formatDate = (date) => {
   return dayjs(date).format('YYYY-MM-DD HH:mm')
-}
-
-const getStatusType = (status) => {
-  const map = {
-    'RECRUITING': 'success',
-    'ONGOING': 'warning',
-    'COMPLETED': 'info'
-  }
-  return map[status] || 'info'
-}
-
-const getStatusText = (status) => {
-  const map = {
-    'RECRUITING': '招募中',
-    'ONGOING': '进行中',
-    'COMPLETED': '已结项'
-  }
-  return map[status] || status
 }
 
 const goToDetail = (id) => {
@@ -132,7 +121,8 @@ const handleSearch = async () => {
       page: pagination.page,
       size: pagination.size,
       status: filters.status,
-      category: filters.category
+      category: filters.category,
+      recruitmentPhase: filters.recruitmentPhase
     })
     activities.value = res.data.records || []
     pagination.total = res.data.total || 0

@@ -28,6 +28,9 @@ public class Activity {
     private LocalDateTime startTime;
     
     private LocalDateTime endTime;
+
+    /** 志愿招募开始时间（早于 {@link #registrationDeadline}） */
+    private LocalDateTime registrationStartTime;
     
     private LocalDateTime registrationDeadline;
     

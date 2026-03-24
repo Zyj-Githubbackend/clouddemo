@@ -66,10 +66,12 @@
 
 #### 启动 MySQL
 ```bash
-# 导入数据库
+# 全量初始化（会 DROP 并重建库 volunteer_platform，详见下方说明）
 mysql -u root -p < database/init.sql
 # 默认密码: 123888
 ```
+
+**数据库脚本**：仅使用 **`database/init.sql`** 作为唯一入口，内含建库、三张业务表、统计视图与示例数据。`vol_activity` 包含 **`registration_start_time`（志愿招募开始）** 与 **`registration_deadline`（报名截止）**；示例数据中 **`current_participants`** 与有效报名流水条数一致。
 
 #### 启动 Redis
 ```bash
@@ -187,8 +189,8 @@ cloud-demo/
 │   │   ├── utils/              # 工具函数
 │   │   └── style.css           # 全局样式
 │   └── vite.config.js          # Vite配置
-├── database/                    # 数据库脚本
-│   └── init.sql                # 初始化SQL（含测试数据）
+├── database/                    # 数据库脚本（仅 init.sql，全量建库+示例）
+│   └── init.sql                # DROP/CREATE 库、表、视图与测试数据
 ├── .github/
 │   └── workflows/              # GitHub Actions（如 PR 自动审批）
 ├── README.md                   # 项目说明（本仓库根目录即文档入口）
@@ -230,6 +232,8 @@ spring.datasource.url=jdbc:mysql://localhost:3306/volunteer_platform
 spring.datasource.username=root
 spring.datasource.password=123888
 ```
+
+**注意**：执行 `init.sql` 前请确认库名无重要数据；脚本首行会 **`DROP DATABASE IF EXISTS volunteer_platform`** 后整库重建。
 
 ### Redis配置
 ```properties

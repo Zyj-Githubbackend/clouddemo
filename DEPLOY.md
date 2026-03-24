@@ -132,6 +132,7 @@ services:
       - "3306:3306"
     volumes:
       - mysql-data:/var/lib/mysql
+      # 仅在数据目录为空时执行一次；已有数据卷时不会重复跑 init.sql，改库需删卷或手动导入
       - ./database/init.sql:/docker-entrypoint-initdb.d/init.sql
     networks:
       - volunteer-network
@@ -274,9 +275,11 @@ sudo apt install mysql-server
 sudo systemctl start mysql
 sudo systemctl enable mysql
 
-# 创建数据库
+# 初始化数据库（会删除已存在的 volunteer_platform 后整库重建）
 mysql -u root -p < database/init.sql
 ```
+
+`database/init.sql` 为**全量脚本**：含 `DROP DATABASE IF EXISTS volunteer_platform`、三张表、`v_activity_statistics` 视图及示例数据；合并了历史增量变更（如 `registration_start_time`），**无需再执行其他 SQL 文件**。
 
 ### 2. 部署 Redis
 

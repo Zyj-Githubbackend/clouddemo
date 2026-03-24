@@ -71,8 +71,8 @@
           <el-col :xs="24" :sm="12" :md="8" :lg="8" v-for="activity in activities" :key="activity.id">
             <el-card class="activity-card" @click="goToDetail(activity.id)">
               <div class="activity-header">
-                <el-tag :type="getStatusType(activity.status)" size="small">
-                  {{ getStatusText(activity.status) }}
+                <el-tag :type="getRecruitmentDisplay(activity).type" size="small">
+                  {{ getRecruitmentDisplay(activity).text }}
                 </el-tag>
                 <el-tag type="info" size="small">{{ activity.category }}</el-tag>
               </div>
@@ -104,6 +104,7 @@ import { ref, onMounted, computed } from 'vue'
 import { useRouter } from 'vue-router'
 import Layout from '@/components/Layout.vue'
 import { getActivityList, getMyRegistrations } from '@/api/activity'
+import { getRecruitmentDisplay } from '@/utils/recruitment'
 import { getUserInfo } from '@/api/user'
 
 const router = useRouter()
@@ -118,24 +119,6 @@ const completedCount = computed(() => {
 const confirmedCount = computed(() => {
   return registrations.value.filter(r => r.hoursConfirmed === 1).length
 })
-
-const getStatusType = (status) => {
-  const map = {
-    'RECRUITING': 'success',
-    'ONGOING': 'warning',
-    'COMPLETED': 'info'
-  }
-  return map[status] || 'info'
-}
-
-const getStatusText = (status) => {
-  const map = {
-    'RECRUITING': '招募中',
-    'ONGOING': '进行中',
-    'COMPLETED': '已结项'
-  }
-  return map[status] || status
-}
 
 const goToDetail = (id) => {
   router.push(`/activity/${id}`)

@@ -11,12 +11,12 @@ cloud-demo/                                    # 项目根目录
 │   └── Spring Cloud Alibaba 2023.0.3.2
 │
 ├── database/                                  # 数据库脚本目录
-│   └── init.sql                              # 数据库初始化脚本
-│       ├── volunteer_platform数据库
-│       ├── sys_user表（用户表）
-│       ├── vol_activity表（活动表）
-│       ├── vol_registration表（报名表）
-│       └── v_activity_statistics视图
+│   └── init.sql                              # 唯一全量初始化脚本（约 140+ 行）
+│       ├── DROP/CREATE volunteer_platform
+│       ├── sys_user（用户表）
+│       ├── vol_activity（活动表，含 registration_start_time / registration_deadline）
+│       ├── vol_registration（报名表）
+│       └── v_activity_statistics（统计视图）
 │
 ├── logs/                                      # 日志目录
 │   ├── monitor-service.log
@@ -217,7 +217,7 @@ cloud-demo/                                    # 项目根目录
 | user-service | ~350 行 | ~40 行 | - |
 | activity-service | ~600 行 | ~50 行 | - |
 | monitor-service | ~20 行 | ~20 行 | - |
-| 数据库脚本 | - | ~200 行 | - |
+| 数据库脚本 | - | ~140 行 | init.sql 全量 |
 | 文档 | - | - | ~2000 行 |
 | **总计** | **~1320 行** | **~340 行** | **~2000 行** |
 

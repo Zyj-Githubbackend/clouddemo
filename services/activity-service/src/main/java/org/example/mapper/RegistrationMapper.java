@@ -4,6 +4,7 @@ import com.baomidou.mybatisplus.core.mapper.BaseMapper;
 import org.apache.ibatis.annotations.Mapper;
 import org.apache.ibatis.annotations.Param;
 import org.apache.ibatis.annotations.Select;
+import org.example.dto.ActivityRegisteredCount;
 import org.example.entity.Registration;
 import org.example.vo.RegistrationVO;
 
@@ -41,4 +42,10 @@ public interface RegistrationMapper extends BaseMapper<Registration> {
             "WHERE r.status = 'REGISTERED' AND r.activity_id = #{activityId} " +
             "ORDER BY r.registration_time DESC")
     List<RegistrationVO> selectRegistrationsForAdminByActivityId(@Param("activityId") Long activityId);
+
+    @Select("<script>SELECT activity_id AS activityId, COUNT(*) AS cnt FROM vol_registration WHERE status = 'REGISTERED' "
+            + "AND activity_id IN "
+            + "<foreach collection='ids' item='id' open='(' separator=',' close=')'>#{id}</foreach> "
+            + "GROUP BY activity_id</script>")
+    List<ActivityRegisteredCount> countRegisteredGroupByActivityId(@Param("ids") List<Long> ids);
 }

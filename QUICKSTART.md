@@ -28,11 +28,13 @@ mysql -u root -p < database/init.sql
 # 打开 database/init.sql 文件执行
 ```
 
+**重要**：`init.sql` 会先 **`DROP DATABASE IF EXISTS volunteer_platform`**，再创建库、表、视图与示例数据。若该库名在生产或本机已有重要数据，请先备份或改脚本中的库名。
+
 3. 验证数据库
 ```sql
 USE volunteer_platform;
 SHOW TABLES;
--- 应该看到: sys_user, vol_activity, vol_registration
+-- 应包含: sys_user, vol_activity, vol_registration, v_activity_statistics（视图）
 ```
 
 **注意**：默认密码配置为 `123888`，如需修改请编辑各服务的 `application.properties`
@@ -365,7 +367,7 @@ node -v  # 应该是 16+
 
 启动完成后，请确认：
 
-- [ ] MySQL 已启动且数据库已导入
+- [ ] MySQL 已启动且已执行 `database/init.sql`（全量脚本会重建 `volunteer_platform`）
 - [ ] Redis 已启动
 - [ ] Nacos 已启动并可访问
 - [ ] 所有后端服务已注册到 Nacos

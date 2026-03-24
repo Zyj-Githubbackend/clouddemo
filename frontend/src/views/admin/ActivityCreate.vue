@@ -78,6 +78,16 @@
           />
         </el-form-item>
 
+        <el-form-item label="招募开始时间" prop="registrationStartTime">
+          <el-date-picker
+            v-model="form.registrationStartTime"
+            type="datetime"
+            placeholder="志愿招募开放报名的开始时间"
+            format="YYYY-MM-DD HH:mm"
+            value-format="YYYY-MM-DDTHH:mm:ss"
+          />
+        </el-form-item>
+
         <el-form-item label="报名截止时间" prop="registrationDeadline">
           <el-date-picker
             v-model="form.registrationDeadline"
@@ -120,6 +130,7 @@ const form = reactive({
   volunteerHours: 2,
   startTime: '',
   endTime: '',
+  registrationStartTime: '',
   registrationDeadline: ''
 })
 
@@ -132,7 +143,44 @@ const rules = {
   volunteerHours: [{ required: true, message: '请输入志愿时长', trigger: 'blur' }],
   startTime: [{ required: true, message: '请选择活动开始时间', trigger: 'change' }],
   endTime: [{ required: true, message: '请选择活动结束时间', trigger: 'change' }],
-  registrationDeadline: [{ required: true, message: '请选择报名截止时间', trigger: 'change' }]
+  registrationStartTime: [
+    { required: true, message: '请选择招募开始时间', trigger: 'change' },
+    {
+      validator: (_rule, value, callback) => {
+        if (!value || !form.registrationDeadline) {
+          callback()
+          return
+        }
+        if (new Date(form.registrationDeadline) <= new Date(value)) {
+          callback(new Error('招募开始须早于报名截止时间'))
+          return
+        }
+        callback()
+      },
+      trigger: 'change'
+    }
+  ],
+  registrationDeadline: [
+    { required: true, message: '请选择报名截止时间', trigger: 'change' },
+    {
+      validator: (_rule, value, callback) => {
+        if (!value || !form.registrationStartTime) {
+          callback()
+          return
+        }
+        if (new Date(value) <= new Date(form.registrationStartTime)) {
+          callback(new Error('截止时间须晚于招募开始时间'))
+          return
+        }
+        if (form.startTime && new Date(value) > new Date(form.startTime)) {
+          callback(new Error('报名截止时间不能晚于活动开始时间'))
+          return
+        }
+        callback()
+      },
+      trigger: 'change'
+    }
+  ]
 }
 
 const handleAIGenerate = async () => {

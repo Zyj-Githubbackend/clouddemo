@@ -166,6 +166,10 @@ curl -X GET http://localhost:9000/user/info \
 - `size`：每页大小（默认10）
 - `status`：活动状态（可选：`RECRUITING`/`ONGOING`/`COMPLETED`）
 - `category`：活动类型（可选：学长火炬、书记驿站等）
+- `recruitmentPhase`：招募阶段（可选，与前端「招募状态」筛选一致）
+  - `NOT_STARTED`：当前时间早于 `registrationStartTime`
+  - `RECRUITING`：在招募窗口内且非结项/取消
+  - `ENDED`：已过报名截止或活动为 `COMPLETED`/`CANCELLED`
 
 **请求示例**：
 ```bash
@@ -177,32 +181,42 @@ curl "http://localhost:9000/activity/list?status=RECRUITING"
 
 # 筛选学长火炬类活动
 curl "http://localhost:9000/activity/list?category=学长火炬"
+
+# 按招募阶段（与 init.sql 示例数据、当前日期组合使用）
+curl "http://localhost:9000/activity/list?recruitmentPhase=ENDED"
 ```
+
+**响应说明**：`data` 为 MyBatis-Plus 分页对象，主要字段为 **`records`**（列表）、**`total`**、**`size`**、**`current`**、**`pages`**。
 
 **响应示例**：
 ```json
 {
   "code": 200,
-  "message": "成功",
+  "message": "操作成功",
   "data": {
-    "total": 5,
-    "list": [
+    "records": [
       {
         "id": 1,
         "title": "学长火炬 - 新生入学引导",
         "description": "协助新生办理入学手续，解答疑问...",
         "location": "学校东门迎新点",
         "maxParticipants": 50,
-        "currentParticipants": 25,
+        "currentParticipants": 2,
         "volunteerHours": 4.0,
-        "startTime": "2024-09-01T08:00:00",
-        "endTime": "2024-09-01T18:00:00",
-        "registrationDeadline": "2024-08-25T23:59:59",
+        "startTime": "2026-09-01T08:00:00",
+        "endTime": "2026-09-01T18:00:00",
+        "registrationStartTime": "2026-08-01T00:00:00",
+        "registrationDeadline": "2026-08-25T23:59:59",
         "status": "RECRUITING",
         "category": "学长火炬",
-        "createTime": "2024-08-01T10:00:00"
+        "isRegistered": false,
+        "availableSlots": 48
       }
-    ]
+    ],
+    "total": 7,
+    "size": 10,
+    "current": 1,
+    "pages": 1
   }
 }
 ```
@@ -223,23 +237,23 @@ curl -X GET http://localhost:9000/activity/1 \
 ```json
 {
   "code": 200,
-  "message": "成功",
+  "message": "操作成功",
   "data": {
     "id": 1,
     "title": "学长火炬 - 新生入学引导",
     "description": "协助新生办理入学手续，解答疑问，帮助新生尽快适应大学生活...",
     "location": "学校东门迎新点",
     "maxParticipants": 50,
-    "currentParticipants": 25,
+    "currentParticipants": 2,
     "volunteerHours": 4.0,
-    "startTime": "2024-09-01T08:00:00",
-    "endTime": "2024-09-01T18:00:00",
-    "registrationDeadline": "2024-08-25T23:59:59",
+    "startTime": "2026-09-01T08:00:00",
+    "endTime": "2026-09-01T18:00:00",
+    "registrationStartTime": "2026-08-01T00:00:00",
+    "registrationDeadline": "2026-08-25T23:59:59",
     "status": "RECRUITING",
     "category": "学长火炬",
-    "createdBy": 1,
-    "createTime": "2024-08-01T10:00:00",
-    "updateTime": "2024-08-01T10:00:00"
+    "isRegistered": false,
+    "availableSlots": 48
   }
 }
 ```
@@ -261,9 +275,10 @@ curl -X POST http://localhost:9000/activity/create \
     "location": "图书馆一楼书记驿站",
     "maxParticipants": 10,
     "volunteerHours": 3.0,
-    "startTime": "2024-09-15T09:00:00",
-    "endTime": "2024-09-15T17:00:00",
-    "registrationDeadline": "2024-09-10T23:59:59",
+    "startTime": "2026-09-15T09:00:00",
+    "endTime": "2026-09-15T17:00:00",
+    "registrationStartTime": "2026-09-01T00:00:00",
+    "registrationDeadline": "2026-09-10T23:59:59",
     "category": "书记驿站"
   }'
 ```
@@ -271,17 +286,20 @@ curl -X POST http://localhost:9000/activity/create \
 **请求参数**：
 ```json
 {
-  "title": "string",                 // 活动标题，必填
-  "description": "string",           // 活动描述，必填
-  "location": "string",              // 活动地点，必填
-  "maxParticipants": 10,             // 招募人数上限，必填
-  "volunteerHours": 3.0,             // 志愿时长，必填
-  "startTime": "2024-09-15T09:00",   // 开始时间，必填
-  "endTime": "2024-09-15T17:00",     // 结束时间，必填
-  "registrationDeadline": "2024-09-10T23:59", // 报名截止，必填
-  "category": "string"               // 活动类型，必填
+  "title": "string",
+  "description": "string",
+  "location": "string",
+  "maxParticipants": 10,
+  "volunteerHours": 3.0,
+  "startTime": "2026-09-15T09:00:00",
+  "endTime": "2026-09-15T17:00:00",
+  "registrationStartTime": "2026-09-01T00:00:00",
+  "registrationDeadline": "2026-09-10T23:59:59",
+  "category": "string"
 }
 ```
+
+**校验规则（后端）**：`registrationStartTime` &lt; `registrationDeadline` ≤ `startTime`。
 
 **响应示例**：
 ```json
@@ -499,9 +517,10 @@ curl -X POST http://localhost:9000/activity/create \
     "location": "测试地点",
     "maxParticipants": 5,
     "volunteerHours": 2.0,
-    "startTime": "2024-12-01T10:00:00",
-    "endTime": "2024-12-01T12:00:00",
-    "registrationDeadline": "2024-11-30T23:59:59",
+    "startTime": "2026-12-01T10:00:00",
+    "endTime": "2026-12-01T12:00:00",
+    "registrationStartTime": "2026-11-01T00:00:00",
+    "registrationDeadline": "2026-11-30T23:59:59",
     "category": "其他"
   }'
 ```

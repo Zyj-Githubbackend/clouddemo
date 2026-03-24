@@ -21,18 +21,18 @@
 
 ### 2. 数据库设计
 
-✅ **database/init.sql** - 完整的数据库初始化脚本
+✅ **database/init.sql** - **唯一**数据库全量脚本（`DROP DATABASE` 后重建 `volunteer_platform`）
 
 **核心表结构**:
-- `sys_user` - 用户表（包含角色、时长等字段）
-- `vol_activity` - 志愿活动表（完整的活动信息）
-- `vol_registration` - 报名流水表（签到、核销状态）
+- `sys_user` - 用户表（角色、累计时长等）
+- `vol_activity` - 志愿活动表（含 **招募开始** `registration_start_time`、**报名截止** `registration_deadline`、`current_participants` 与流水对齐）
+- `vol_registration` - 报名流水（签到、核销状态）
 - `v_activity_statistics` - 活动统计视图
 
 **测试数据**:
-- 3个测试用户（1个管理员 + 2个志愿者）
-- 5个志愿活动（学长火炬、书记驿站、爱心小屋、校友招商、暖冬行动）
-- 4条报名记录
+- 3 个测试用户（1 管理员 + 2 志愿者）
+- 7 个志愿活动（含不同招募窗口与 `COMPLETED` / `CANCELLED` 样例）
+- 4 条报名记录（与对应活动的 `current_participants` 一致）
 
 ### 3. 核心功能实现
 
