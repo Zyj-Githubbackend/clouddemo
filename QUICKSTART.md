@@ -77,8 +77,14 @@ sh startup.sh -m standalone
 
 ### 步骤 4：编译后端项目 (2分钟)
 
+在 **`services` 目录**下执行（与 `services/pom.xml` 一致）：
 ```bash
 cd services
+mvn clean install -DskipTests
+```
+
+或在**仓库根目录**执行（根 `pom.xml` 聚合构建 `services`）：
+```bash
 mvn clean install -DskipTests
 ```
 
@@ -118,6 +124,8 @@ mvn spring-boot:run
 ```
 
 **验证**：看到日志 `nacos registry, DEFAULT_GROUP activity-service ...`
+
+**（可选）AI 生成活动描述**：需调用 DeepSeek 时，先设置环境变量 **`DEEPSEEK_API_KEY`** 再启动本服务；未设置则使用内置模板文案。详见 `README.md` →「AI / DeepSeek 配置」。
 
 #### 5.3 启动 gateway-service (9000)
 
@@ -211,7 +219,7 @@ curl -X POST http://localhost:9000/user/login \
 1. 使用 `admin` 登录
 2. 进入"管理后台"
 3. 发布新的志愿活动
-4. （可选）使用AI生成活动描述
+4. （可选）使用 AI 生成活动描述（需配置 **`DEEPSEEK_API_KEY`**，见 README）
 5. 核销志愿者的服务时长
 
 ## 🐛 常见问题排查

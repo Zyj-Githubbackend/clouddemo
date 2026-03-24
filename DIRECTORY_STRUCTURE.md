@@ -128,7 +128,7 @@ cloud-demo/                                    # 项目根目录
 │   │               ├── server.port=8200
 │   │               ├── MySQL配置
 │   │               ├── Redis配置
-│   │               ├── AI API配置
+│   │               ├── DeepSeek（OpenAI 兼容）API 配置，DEEPSEEK_API_KEY
 │   │               └── Nacos配置
 │   │
 │   ├── monitor-service/                      # 【监控服务】端口: 9100
@@ -143,24 +143,20 @@ cloud-demo/                                    # 项目根目录
 │   │           └── application.properties      # 配置文件
 │   │               ├── server.port=9100
 │   │               └── Spring Boot Admin配置
-│   │
-│   ├── service-order/                        # 【原模板-可删除】
-│   │   └── ...
-│   │
-│   └── service-product/                      # 【原模板-可删除】
-│       └── ...
 │
-├── 📄 文档文件
-├── README.md                                  # 项目说明（10KB）
-├── ARCHITECTURE.md                            # 架构设计（17KB）
-├── DEPLOY.md                                  # 部署指南（7.7KB）
-├── API_TEST.md                               # API测试文档（7.9KB）
-├── QUICKSTART.md                             # 快速启动（5.6KB）
-├── PROJECT_SUMMARY.md                        # 项目总结
+├── 📄 文档与 CI（仓库根目录）
+├── README.md
+├── ARCHITECTURE.md
+├── DEPLOY.md
+├── API_TEST.md
+├── QUICKSTART.md
+├── PROJECT_SUMMARY.md
+├── CHECKLIST.md
+├── .github/workflows/                        # GitHub Actions 工作流
 │
 └── 🛠️ 工具脚本
-    ├── start-all.bat                         # Windows启动脚本
-    └── start-all.sh                          # Linux启动脚本
+    ├── start-all.bat                         # Windows 启动（顺序：monitor→gateway→user→activity）
+    └── start-all.sh                          # Linux 启动（同上）
 ```
 
 ## 关键目录说明
@@ -205,7 +201,7 @@ cloud-demo/                                    # 项目根目录
 
 | 类型 | 数量 | 说明 |
 |------|------|------|
-| Java源文件 | 33 | 不含原模板 |
+| Java源文件 | 34 | services 下业务与公共代码 |
 | POM文件 | 7 | 包括父POM |
 | 配置文件 | 5 | application.properties |
 | SQL脚本 | 1 | init.sql |
@@ -237,7 +233,7 @@ cloud-demo/                                    # 项目根目录
 ### Controller (4个)
 1. `UserController.java` - 3个接口
 2. `InternalUserController.java` - 1个内部接口
-3. `ActivityController.java` - 7个接口
+3. `ActivityController.java` - 活动/报名/核销/AI 等 REST 接口
 
 ### Service (4个)
 1. `UserService.java` - 用户业务逻辑

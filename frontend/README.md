@@ -18,10 +18,12 @@
 |------|------|------|
 | Vue | 3.4 | 渐进式框架 + Composition API |
 | Vite | 5.4 | 下一代前端构建工具 |
-| Element Plus | 最新 | Vue 3 UI组件库 |
-| Pinia | 最新 | Vue 状态管理 |
-| Vue Router | 4.x | 官方路由管理 |
-| Axios | 最新 | Promise HTTP客户端 |
+| Element Plus | ^2.4 | Vue 3 UI 组件库 |
+| Pinia | ^2.2 | Vue 状态管理 |
+| Vue Router | ^4.2 | 官方路由管理 |
+| Axios | ^1.6 | HTTP 客户端 |
+| ECharts | ^5.4 | 图表（首页等） |
+| dayjs | ^1.11 | 日期格式化 |
 
 ## 📁 项目结构
 

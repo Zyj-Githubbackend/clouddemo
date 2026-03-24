@@ -5,7 +5,8 @@
 ## 🌐 基础信息
 
 - **API网关地址**：`http://localhost:9000`
-- **认证方式**：JWT Bearer Token
+- **认证方式**：JWT Bearer Token（网关 `AuthFilter` 白名单除外）
+- **网关白名单（无需 Token）**：`/user/login`、`/user/register`、以及以 `/activity/list` 开头的路径（活动列表公开）
 - **返回格式**：JSON
 
 ### 统一返回格式
@@ -357,6 +358,8 @@ curl -X GET http://localhost:9000/activity/myRegistrations \
 
 **需要管理员权限**
 
+**说明**：后端使用 **DeepSeek**（OpenAI 兼容 `chat/completions`）。请在 **activity-service** 配置环境变量 **`DEEPSEEK_API_KEY`**，或见 `application.properties` 中 `ai.api.*`。未配置或调用失败时仍返回 **200**，内容为**本地模板生成的兜底文案**。
+
 **请求示例**：
 ```bash
 curl -X POST http://localhost:9000/activity/ai/generate \
@@ -387,7 +390,53 @@ curl -X POST http://localhost:9000/activity/ai/generate \
 }
 ```
 
-### 7. 获取活动的报名列表（管理员）
+### 7a. 获取全部报名列表（管理员）
+
+**接口**：`GET /activity/admin/registrations`  
+**Query**：`activityId`（可选，传入则只查该活动下的报名）
+
+**需要管理员权限**（请求头 `X-User-Role` 由网关在解析 JWT 后注入）
+
+**请求示例**：
+```bash
+curl -X GET "http://localhost:9000/activity/admin/registrations" \
+  -H "Authorization: Bearer ADMIN_TOKEN"
+
+# 仅查看活动 id=1 的报名
+curl -X GET "http://localhost:9000/activity/admin/registrations?activityId=1" \
+  -H "Authorization: Bearer ADMIN_TOKEN"
+```
+
+**响应示例**（字段与 `RegistrationVO` 一致，含联表用户信息）：
+```json
+{
+  "code": 200,
+  "message": "成功",
+  "data": [
+    {
+      "id": 1,
+      "userId": 2,
+      "activityId": 1,
+      "activityTitle": "学长火炬 - 新生入学引导",
+      "location": "学校东门迎新点",
+      "volunteerHours": 4.0,
+      "startTime": "2024-09-01T08:00:00",
+      "registrationTime": "2024-08-20T15:30:00",
+      "checkInStatus": 0,
+      "hoursConfirmed": 0,
+      "status": "REGISTERED",
+      "username": "student01",
+      "realName": "张三",
+      "studentNo": "2021101",
+      "phone": "13800138001"
+    }
+  ]
+}
+```
+
+**说明**：仅返回 `status=REGISTERED` 的报名；数据来自 `vol_registration` 联表 `vol_activity`、`sys_user`（与 `activity-service` 使用同一 MySQL 库）。
+
+### 7b. 获取指定活动的报名列表（管理员）
 
 **接口**：`GET /activity/{activityId}/registrations`
 
@@ -399,35 +448,7 @@ curl -X GET http://localhost:9000/activity/1/registrations \
   -H "Authorization: Bearer ADMIN_TOKEN"
 ```
 
-**响应示例**：
-```json
-{
-  "code": 200,
-  "message": "成功",
-  "data": [
-    {
-      "id": 1,
-      "userId": 2,
-      "username": "student01",
-      "realName": "张三",
-      "studentNo": "2021101",
-      "phone": "13800138001",
-      "registrationTime": "2024-08-20T15:30:00",
-      "hoursConfirmed": false
-    },
-    {
-      "id": 2,
-      "userId": 3,
-      "username": "student02",
-      "realName": "李四",
-      "studentNo": "2021102",
-      "phone": "13800138002",
-      "registrationTime": "2024-08-20T16:00:00",
-      "hoursConfirmed": true
-    }
-  ]
-}
-```
+响应格式同 **7a** 的 `data` 数组（仅该活动）。
 
 ### 8. 核销时长（管理员）
 
@@ -451,8 +472,8 @@ curl -X POST http://localhost:9000/activity/confirmHours/1 \
 ```
 
 **说明**：
-- 核销成功后，`vol_registration.hours_confirmed` 设为 `true`
-- 同时调用 `user-service` 更新用户的累计志愿时长
+- 核销成功后，`vol_registration.hours_confirmed` 设为 `1`（已核销）
+- 同时经 Feign 调用 `user-service` 更新用户的累计志愿时长
 
 ## 🧪 测试场景
 
@@ -511,15 +532,19 @@ curl http://localhost:9000/activity/myRegistrations \
 
 #### 步骤7：管理员查看报名列表
 ```bash
-curl http://localhost:9000/activity/1/registrations \
+curl http://localhost:9000/activity/admin/registrations \
   -H "Authorization: Bearer ADMIN_TOKEN"
 ```
+
+从返回的 `data` 中取待核销记录的 `id`，用于下一步。
 
 #### 步骤8：管理员核销时长
 ```bash
 curl -X POST http://localhost:9000/activity/confirmHours/1 \
   -H "Authorization: Bearer ADMIN_TOKEN"
 ```
+
+（将 `1` 替换为步骤 7 中某条记录的 `id`。）
 
 #### 步骤9：志愿者查看更新后的时长
 ```bash

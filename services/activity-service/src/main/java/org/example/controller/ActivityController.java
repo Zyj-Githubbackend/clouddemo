@@ -36,15 +36,6 @@ public class ActivityController {
         return Result.success(activities);
     }
     
-    @GetMapping("/{id}")
-    public Result<ActivityVO> getActivityDetail(
-            @PathVariable Long id,
-            @RequestHeader(value = "X-User-Id", required = false) Long userId) {
-        
-        ActivityVO activity = activityService.getActivityDetail(id, userId);
-        return Result.success(activity);
-    }
-    
     @PostMapping("/create")
     public Result<Void> createActivity(
             @RequestBody ActivityCreateRequest request,
@@ -75,6 +66,35 @@ public class ActivityController {
         List<RegistrationVO> registrations = activityService.getUserRegistrations(userId);
         return Result.success(registrations);
     }
+
+    /**
+     * 管理员：全部报名列表；可选 activityId 筛选某一活动。
+     * 须放在 /{id} 之前，且路径字面量 admin 不可被当作 Long 解析。
+     */
+    @GetMapping("/admin/registrations")
+    public Result<List<RegistrationVO>> listAdminRegistrations(
+            @RequestParam(required = false) Long activityId,
+            @RequestHeader("X-User-Role") String role) {
+
+        if (!"ADMIN".equals(role)) {
+            return Result.forbidden("只有管理员才能查看报名列表");
+        }
+        return Result.success(activityService.listRegistrationsForAdmin(activityId));
+    }
+
+    /**
+     * 管理员：指定活动的报名列表（与 API 文档路径一致）。
+     */
+    @GetMapping("/{activityId}/registrations")
+    public Result<List<RegistrationVO>> listRegistrationsByActivity(
+            @PathVariable Long activityId,
+            @RequestHeader("X-User-Role") String role) {
+
+        if (!"ADMIN".equals(role)) {
+            return Result.forbidden("只有管理员才能查看报名列表");
+        }
+        return Result.success(activityService.listRegistrationsForAdmin(activityId));
+    }
     
     @PostMapping("/confirmHours/{registrationId}")
     public Result<Void> confirmHours(
@@ -100,5 +120,17 @@ public class ActivityController {
         
         String description = aiService.generateActivityDescription(request);
         return Result.success(description);
+    }
+
+    /**
+     * 活动详情（须放在固定路径与 /{id}/registrations 之后，避免路径被错误匹配）。
+     */
+    @GetMapping("/{id}")
+    public Result<ActivityVO> getActivityDetail(
+            @PathVariable Long id,
+            @RequestHeader(value = "X-User-Id", required = false) Long userId) {
+
+        ActivityVO activity = activityService.getActivityDetail(id, userId);
+        return Result.success(activity);
     }
 }

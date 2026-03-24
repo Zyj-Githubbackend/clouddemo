@@ -17,7 +17,7 @@
 - 🔐 **JWT安全认证** - API网关统一鉴权，角色权限控制
 - 🚀 **微服务架构** - 服务注册与发现，负载均衡，高可用
 - 📊 **实时数据统计** - 个人志愿时长、活动参与度等数据可视化
-- 🤖 **AI智能辅助** - 支持AI生成活动描述（可选）
+- 🤖 **AI智能辅助** - 管理员可一键生成活动描述（DeepSeek 兼容 OpenAI 接口，可选）
 - 🔄 **防超卖机制** - Redis分布式锁保证活动报名准确性
 - 📱 **移动端适配** - 完美支持手机、平板等移动设备
 - ⚡ **快速登录** - 开发/测试环境一键切换账号
@@ -100,16 +100,19 @@ sh startup.sh -m standalone
 3. **GatewayApplication** (9000端口) - API网关
 4. **MonitorApplication** (9100端口，可选) - 监控中心
 
-或使用命令行：
+或使用命令行（在 **`services` 目录**下编译后，jar 位于各子模块的 `target/`）：
 ```bash
 cd services
 mvn clean install -DskipTests
 
-# 启动各个服务
+# 启动各个服务（版本号与 pom 中一致，默认 0.0.1-SNAPSHOT）
 java -jar user-service/target/user-service-0.0.1-SNAPSHOT.jar
 java -jar activity-service/target/activity-service-0.0.1-SNAPSHOT.jar
 java -jar gateway-service/target/gateway-service-0.0.1-SNAPSHOT.jar
+java -jar monitor-service/target/monitor-service-0.0.1-SNAPSHOT.jar   # 可选
 ```
+
+也可在**仓库根目录**执行 `mvn clean install -DskipTests`（使用根 `pom.xml` 聚合 `services`），此时 jar 路径为 `services/user-service/target/` 等。
 
 ### 3. 启动前端
 
@@ -186,11 +189,16 @@ cloud-demo/
 │   └── vite.config.js          # Vite配置
 ├── database/                    # 数据库脚本
 │   └── init.sql                # 初始化SQL（含测试数据）
-└── docs/                       # 文档
-    ├── QUICKSTART.md           # 快速开始
-    ├── ARCHITECTURE.md         # 架构文档
-    ├── API_TEST.md             # API测试
-    └── DEPLOY.md               # 部署文档
+├── .github/
+│   └── workflows/              # GitHub Actions（如 PR 自动审批）
+├── README.md                   # 项目说明（本仓库根目录即文档入口）
+├── QUICKSTART.md               # 快速开始
+├── ARCHITECTURE.md             # 架构说明
+├── API_TEST.md                 # 接口测试说明
+├── DEPLOY.md                   # 部署指南
+├── PROJECT_SUMMARY.md          # 项目总结
+├── DIRECTORY_STRUCTURE.md      # 目录结构
+└── CHECKLIST.md                # 自检清单
 ```
 
 ## 🎨 界面预览
@@ -239,6 +247,20 @@ spring.cloud.nacos.discovery.server-addr=127.0.0.1:8848
 jwt.secret=volunteerPlatformSecretKey2024
 jwt.expiration=86400000
 ```
+
+### AI / DeepSeek 配置（activity-service，可选）
+
+活动服务通过 **OpenAI 兼容** 的 Chat Completions 调用 **DeepSeek** 生成文案。配置见 `services/activity-service/src/main/resources/application.properties`：
+
+```properties
+ai.api.url=https://api.deepseek.com/v1/chat/completions
+ai.api.key=${DEEPSEEK_API_KEY:}
+ai.api.model=deepseek-chat
+```
+
+- **推荐**：设置环境变量 **`DEEPSEEK_API_KEY`**（勿将密钥提交到 Git）。未设置或为空时自动使用本地模板文案。
+- **模型**：`deepseek-chat`（默认）；需要思考模式可改为 `deepseek-reasoner`。
+- 官方文档：<https://api-docs.deepseek.com/zh-cn/>
 
 ## 📊 功能模块
 
@@ -293,6 +315,11 @@ jwt.expiration=86400000
 ### 5. Gateway CORS 错误
 - 使用 `allowed-origin-patterns` 而非 `allowed-origins`
 - 配置 `allow-credentials=true`
+
+### 6. AI 生成始终是模板文案
+- 确认已设置环境变量 **`DEEPSEEK_API_KEY`** 并已重启 **activity-service**
+- 检查 `ai.api.url` 是否为 `https://api.deepseek.com/v1/chat/completions`
+- 查看 activity-service 日志中是否有调用异常
 
 ## 📝 开发规范
 

@@ -399,9 +399,10 @@ curl -X GET http://localhost:9000/activity/myRegistrations \
 ### 运维优化
 1. [ ] Docker容器化
 2. [ ] Kubernetes编排
-3. [ ] Jenkins CI/CD
+3. [ ] Jenkins CI/CD（可与 GitHub Actions `auto-approve-dev-to-main` 等并存，注意审批规则）
 4. [ ] 性能监控与调优
 5. [ ] 日志分析系统
+6. [ ] 生产环境为 activity-service 配置 **`DEEPSEEK_API_KEY`**（勿写入仓库）
 
 ---
 

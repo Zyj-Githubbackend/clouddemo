@@ -21,7 +21,7 @@ public class AIService {
     @Value("${ai.api.key:}")
     private String apiKey;
     
-    @Value("${ai.api.model:gpt-3.5-turbo}")
+    @Value("${ai.api.model:deepseek-chat}")
     private String model;
     
     private final RestTemplate restTemplate = new RestTemplate();

@@ -9,7 +9,7 @@
 
 ## ✅ 已完成内容
 
-### 1. 微服务模块 (7个)
+### 1. 微服务模块（`services/pom.xml` 共 5 个子模块 + common）
 
 | 模块 | 端口 | 状态 | 功能说明 |
 |------|------|------|----------|
@@ -18,8 +18,6 @@
 | **user-service** | 8100 | ✅ | 用户服务（注册、登录、信息管理、时长累计） |
 | **activity-service** | 8200 | ✅ | 活动服务（发布、报名、核销、AI生成） |
 | **monitor-service** | 9100 | ✅ | 监控中心（Spring Boot Admin） |
-| service-order | 8000 | 📦 | 原模板（可删除） |
-| service-product | 8001 | 📦 | 原模板（可删除） |
 
 ### 2. 数据库设计
 
@@ -46,7 +44,8 @@
 - ✅ 统一异常处理
 
 **核心文件**:
-- `UserController.java` - 3个接口（注册、登录、获取信息）
+- `UserController.java` - 对外 3 个接口（注册、登录、获取信息）
+- `InternalUserController.java` - 内部 `POST /user/updateHours`（供 activity-service Feign）
 - `UserService.java` - 业务逻辑
 - `UserMapper.java` - 数据访问层
 - `User.java` - 实体类
@@ -61,10 +60,11 @@
 - ✅ 我的报名记录
 - ✅ 时长核销（管理员权限）
 - ✅ AI智能生成文案（管理员权限）
-- ✅ Feign调用user-service更新时长
+- ✅ Feign 调用 user-service `POST /user/updateHours` 更新累计时长（走服务间调用，不经网关）
+- ✅ 管理员报名列表：`GET /activity/admin/registrations`、`GET /activity/{activityId}/registrations`
 
 **核心文件**:
-- `ActivityController.java` - 7个接口
+- `ActivityController.java` - 活动与报名相关 REST 接口（含管理员报名列表）
 - `ActivityService.java` - 核心业务逻辑（防超卖）
 - `AIService.java` - AI文案生成（带降级）
 - `ActivityMapper/RegistrationMapper.java` - 数据访问
@@ -99,7 +99,7 @@
 
 #### 4.1 POM依赖配置
 - ✅ 父POM（Spring Boot 3.3.4）
-- ✅ services/pom.xml（7个模块）
+- ✅ services/pom.xml（5 个子模块：common、gateway、user、activity、monitor）
 - ✅ 各服务pom.xml（完整依赖）
 
 **关键依赖**:
@@ -183,10 +183,10 @@ public class AuthFilter implements GlobalFilter, Ordered {
 ### 3. AI智能集成 ⭐⭐⭐⭐
 
 ```java
-// 调用AI API生成文案，失败时降级到模板
+// 调用 DeepSeek（OpenAI 兼容 chat/completions）生成文案，失败时降级到模板
 public String generateActivityDescription(AIGenerateRequest request) {
     try {
-        // 调用OpenAI API
+        // POST https://api.deepseek.com/v1/chat/completions，Bearer DEEPSEEK_API_KEY
     } catch (Exception e) {
         // 降级返回模板文案
         return generateFallbackDescription(request);
@@ -265,7 +265,7 @@ public class Result<T> {
 
 ### 代码交付物
 - [x] 完整的Maven项目
-- [x] 7个微服务模块
+- [x] services 下 5 个子模块 + 根聚合构建正常
 - [x] 33个Java源文件
 - [x] 完整的配置文件
 
@@ -338,7 +338,7 @@ curl -X POST http://localhost:9000/user/login \
 2. **Token有效期**: 24小时，过期需重新登录
 3. **时区配置**: 统一使用Asia/Shanghai
 4. **端口占用**: 确保9000、8100、8200、9100端口未被占用
-5. **AI API**: 可选配置，未配置时使用降级方案
+5. **DeepSeek / AI**: `activity-service` 通过环境变量 **`DEEPSEEK_API_KEY`** 与 `ai.api.*` 配置；未配置或失败时使用模板降级
 
 ## 📞 技术支持
 

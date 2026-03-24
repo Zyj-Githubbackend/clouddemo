@@ -56,7 +56,7 @@
 ┌─────────────────────────────────────────────────────────────┐
 │                    基础设施层                                 │
 │  ┌──────────────┐  ┌──────────────┐  ┌─────────────────┐   │
-│  │Nacos (8848)  │  │Monitor (9100)│  │AI API(可选)      │   │
+│  │Nacos (8848)  │  │Monitor (9100)│  │DeepSeek API(可选)│   │
 │  │服务注册/配置  │  │服务监控      │  │智能文案生成      │   │
 │  └──────────────┘  └──────────────┘  └─────────────────┘   │
 └─────────────────────────────────────────────────────────────┘
@@ -96,6 +96,7 @@ cloud-demo/
 │   └── init.sql                   # 初始化脚本
 ├── logs/                          # 日志目录
 ├── services/                      # 服务模块
+│   ├── pom.xml                    # 微服务父 POM（子模块：common + 各服务）
 │   ├── common/                    # 公共模块
 │   │   └── src/main/java/org/example/common/
 │   │       ├── result/            # 统一返回Result
@@ -113,7 +114,7 @@ cloud-demo/
 │   │   ├── vo/                    # LoginResponse, UserInfo
 │   │   ├── mapper/                # UserMapper
 │   │   ├── service/               # UserService
-│   │   └── controller/            # UserController
+│   │   └── controller/            # UserController、InternalUserController（Feign 更新时长）
 │   ├── activity-service/          # 活动服务
 │   │   ├── entity/                # Activity, Registration
 │   │   ├── dto/                   # ActivityCreateRequest, AIGenerateRequest
@@ -124,15 +125,16 @@ cloud-demo/
 │   │   └── controller/            # ActivityController
 │   ├── monitor-service/           # 监控服务
 │   │   └── MonitorApplication     # Spring Boot Admin Server
-│   ├── service-order/             # (原有模板-可删除)
-│   └── service-product/           # (原有模板-可删除)
-├── pom.xml                        # 父POM
-├── README.md                      # 项目说明
-├── DEPLOY.md                      # 部署指南
-├── API_TEST.md                    # API测试文档
-├── start-all.bat                  # Windows启动脚本
-├── start-all.sh                   # Linux启动脚本
-└── .gitignore                     # Git忽略配置
+├── pom.xml                        # 根父 POM（仅聚合 module services）
+├── README.md
+├── QUICKSTART.md
+├── ARCHITECTURE.md
+├── API_TEST.md
+├── DEPLOY.md
+├── .github/workflows/             # GitHub Actions
+├── start-all.bat
+├── start-all.sh
+└── .gitignore
 ```
 
 ## 💾 数据模型
@@ -255,7 +257,9 @@ activityMapper.incrementParticipants(activityId);
   "keywords": "献血车, 爱心服务, 周六"
 }
 
-// AI处理
+// AI处理（DeepSeek，OpenAI 兼容接口）
+// 配置：ai.api.url=https://api.deepseek.com/v1/chat/completions
+//       环境变量 DEEPSEEK_API_KEY；模型 deepseek-chat / deepseek-reasoner
 Prompt: "请为校园志愿活动生成招募文案..."
 
 // 输出
@@ -264,7 +268,7 @@ Prompt: "请为校园志愿活动生成招募文案..."
 在这里，你将有机会用实际行动践行志愿精神..."
 ```
 
-**降级策略**: API调用失败时返回模板文案
+**降级策略**: 未配置密钥或调用失败时返回模板文案
 
 ## 📈 监控体系
 
@@ -314,7 +318,7 @@ Prompt: "请为校园志愿活动生成招募文案..."
 
 ## 🔄 后续扩展方向
 
-1. **前端开发**: Vue3 + Element Plus完整界面
+1. **管理端增强**: 例如报名导出、签到录入、分页筛选等
 2. **消息队列**: RocketMQ异步处理时长核销
 3. **分布式事务**: Seata保证跨服务事务一致性
 4. **限流降级**: Sentinel实现网关流控

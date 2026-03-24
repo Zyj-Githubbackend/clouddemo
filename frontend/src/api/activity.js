@@ -50,6 +50,23 @@ export const confirmHours = (registrationId) => {
   })
 }
 
+// 管理员：全部报名列表（可选 activityId 查询参数，筛选某一活动）
+export const getAdminRegistrations = (activityId) => {
+  return request({
+    url: '/activity/admin/registrations',
+    method: 'get',
+    params: activityId != null && activityId !== '' ? { activityId } : {}
+  })
+}
+
+// 管理员：指定活动的报名列表
+export const getActivityRegistrations = (activityId) => {
+  return request({
+    url: `/activity/${activityId}/registrations`,
+    method: 'get'
+  })
+}
+
 // AI生成文案
 export const generateDescription = (data) => {
   return request({

@@ -63,7 +63,7 @@
 <script setup>
 import { ref, onMounted } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
-import { confirmHours } from '@/api/activity'
+import { confirmHours, getAdminRegistrations } from '@/api/activity'
 import dayjs from 'dayjs'
 
 const loading = ref(false)
@@ -96,13 +96,11 @@ const handleConfirm = (row) => {
 const fetchRegistrations = async () => {
   loading.value = true
   try {
-    // 这里应该调用一个管理员专用的接口获取所有报名记录
-    // 由于后端没有提供，这里模拟返回空数组
-    // 实际应该是: const res = await getAllRegistrations()
-    registrations.value = []
-    ElMessage.warning('管理员查看所有报名记录接口需要后端补充')
+    const res = await getAdminRegistrations()
+    registrations.value = res.data || []
   } catch (error) {
     console.error('获取报名记录失败:', error)
+    registrations.value = []
   } finally {
     loading.value = false
   }

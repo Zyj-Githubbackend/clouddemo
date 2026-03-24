@@ -21,7 +21,6 @@ import org.springframework.transaction.annotation.Transactional;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.concurrent.TimeUnit;
-import java.util.stream.Collectors;
 
 @Service
 public class ActivityService {
@@ -154,6 +153,16 @@ public class ActivityService {
     
     public List<RegistrationVO> getUserRegistrations(Long userId) {
         return registrationMapper.selectUserRegistrations(userId);
+    }
+
+    /**
+     * 管理员查看报名记录；activityId 为空则返回全部（有效报名 status=REGISTERED）。
+     */
+    public List<RegistrationVO> listRegistrationsForAdmin(Long activityId) {
+        if (activityId != null) {
+            return registrationMapper.selectRegistrationsForAdminByActivityId(activityId);
+        }
+        return registrationMapper.selectAllRegistrationsForAdmin();
     }
     
     @Transactional(rollbackFor = Exception.class)

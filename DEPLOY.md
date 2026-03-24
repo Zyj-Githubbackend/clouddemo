@@ -2,6 +2,8 @@
 
 本文档介绍如何将校园志愿服务管理平台部署到生产环境。
 
+**路径说明**：文中出现的 **`/opt/volunteer-platform`**、`/var/www/volunteer-platform` 等为**示例目录名**（与业务「志愿平台」对应）；本仓库 artifactId 为 **`cloud-demo`**，部署时可按需改为 `/opt/cloud-demo` 等一致路径。
+
 ## 📋 部署前准备
 
 ### 服务器要求
@@ -307,17 +309,18 @@ sh bin/startup.sh -m standalone
 ### 4. 部署后端服务
 
 ```bash
-# 编译项目
-cd services
+# 在仓库根目录编译（根 pom 聚合 services）
 mvn clean package -DskipTests
+
+# 若仅在 services 目录编译，则 jar 在 user-service/target/ 等，无需 services/ 前缀
 
 # 创建服务目录
 sudo mkdir -p /opt/volunteer-platform/{user-service,activity-service,gateway-service}
 
-# 复制 jar 包
-sudo cp user-service/target/*.jar /opt/volunteer-platform/user-service/
-sudo cp activity-service/target/*.jar /opt/volunteer-platform/activity-service/
-sudo cp gateway-service/target/*.jar /opt/volunteer-platform/gateway-service/
+# 复制 jar 包（以下路径对应「根目录编译」）
+sudo cp services/user-service/target/*.jar /opt/volunteer-platform/user-service/
+sudo cp services/activity-service/target/*.jar /opt/volunteer-platform/activity-service/
+sudo cp services/gateway-service/target/*.jar /opt/volunteer-platform/gateway-service/
 
 # 创建启动脚本
 sudo vim /opt/volunteer-platform/user-service/start.sh
@@ -450,7 +453,25 @@ jwt.secret=RANDOM_STRONG_SECRET_KEY_AT_LEAST_256_BITS
 jwt.expiration=86400000
 ```
 
-### 3. 配置 HTTPS
+### 3. DeepSeek / AI 文案（activity-service）
+
+生产环境**不要**把 API Key 写进仓库。在部署 **activity-service** 的进程环境中设置：
+
+```bash
+export DEEPSEEK_API_KEY="sk-你的密钥"
+```
+
+或在 `application-prod.properties` 中仅通过占位引用（由启动脚本注入），例如仍使用：
+
+```properties
+ai.api.url=https://api.deepseek.com/v1/chat/completions
+ai.api.key=${DEEPSEEK_API_KEY:}
+ai.api.model=deepseek-chat
+```
+
+未设置 `DEEPSEEK_API_KEY` 时服务正常启动，AI 接口返回模板兜底文案。详见 `README.md`「AI / DeepSeek 配置」。
+
+### 4. 配置 HTTPS
 
 ```bash
 # 安装 Certbot
@@ -463,7 +484,7 @@ sudo certbot --nginx -d your-domain.com
 sudo certbot renew --dry-run
 ```
 
-### 4. 配置防火墙
+### 5. 配置防火墙
 
 ```bash
 # 允许 HTTP/HTTPS
@@ -479,7 +500,7 @@ sudo ufw deny 8200/tcp
 sudo ufw enable
 ```
 
-### 5. 配置日志
+### 6. 配置日志
 
 修改 `application-prod.properties`：
 
@@ -549,9 +570,7 @@ jobs:
         distribution: 'adopt'
     
     - name: Build with Maven
-      run: |
-        cd services
-        mvn clean package -DskipTests
+      run: mvn -B clean package -DskipTests
     
     - name: Build Frontend
       run: |
@@ -579,6 +598,11 @@ jobs:
           ./deploy.sh
 ```
 
+### （可选）PR 自动审批工作流
+
+本仓库含 `.github/workflows/auto-approve-dev-to-main.yml`：目标分支为 **`main`**、源分支为 **`dev`** 的 PR，在 **可合并且无冲突** 时由 GitHub Actions 自动提交 **Approve**。请在仓库 **Settings → Actions → General** 中开启 **Read and write**，并勾选 **Allow GitHub Actions to create and approve pull requests**。  
+**合并**仍需在 PR 上启用 **Auto-merge**（检查通过后由 GitHub 合并）或手动点 **Merge**；与 Jenkins 等外部 CI 并存时，注意审批与检查规则不要互相矛盾。
+
 ### Jenkins Pipeline 示例
 
 ```groovy
@@ -594,7 +618,7 @@ pipeline {
         
         stage('Build Backend') {
             steps {
-                sh 'cd services && mvn clean package -DskipTests'
+                sh 'mvn -B clean package -DskipTests'
             }
         }
         
