@@ -3,8 +3,9 @@
 # 若报错「GitHub Actions is not permitted to approve pull requests」：
 # 1) 仓库 Settings → Actions → General → Workflow permissions：
 #    勾选「Read and write」并勾选「Allow GitHub Actions to create and approve pull requests」后保存。
-# 2) 若组织禁止上述项：在仓库 Secrets 添加 GH_PR_APPROVE_TOKEN（fine-grained 或 classic PAT，
-#    需能对本仓库读 PR 并提交 review），本工作流会优先使用该令牌。
+# 2) 若组织禁止上述项：在仓库 Secrets 添加 GH_PR_APPROVE_TOKEN（需含读 PR、提交 review；
+#    使用 PAT 时会调用 /user 解析审批人账号；默认 GITHUB_TOKEN 不能访问 /user，脚本会固定按
+#    github-actions[bot] 做去重）。
 #
 # - mergeable 为 false / mergeable_state 为 dirty：不批准（含冲突）。
 # - 不会替代「合并」；分支保护、Code Owner 等见仓库设置。
@@ -33,8 +34,18 @@ jobs:
             const pr = context.payload.pull_request;
             const { owner, repo } = context.repo;
 
-            const { data: auth } = await github.rest.users.getAuthenticated();
-            const approverLogin = auth.login;
+            // GITHUB_TOKEN 无权调用 GET /user；用 PAT 时可以取到真实登录名。
+            let approverLogin = 'github-actions[bot]';
+            try {
+              const { data: auth } = await github.rest.users.getAuthenticated();
+              approverLogin = auth.login;
+            } catch (e) {
+              const st = e.status ?? e.response?.status;
+              if (st !== 403) throw e;
+              core.info(
+                'Skip GET /user (GITHUB_TOKEN); dedupe reviews as github-actions[bot]'
+              );
+            }
 
             const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
             let detail = await github.rest.pulls.get({
