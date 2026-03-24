@@ -1,0 +1,79 @@
+# 当 PR 为 dev → main 时，在「可合并、无冲突」的前提下自动 Approve。
+# - mergeable 为 false / mergeable_state 为 dirty 等：不批准（含与 main 存在冲突时）。
+# - GitHub 计算 mergeable 可能延迟，脚本内会短暂轮询后再判断。
+# - 不会替代「合并」；分支保护、Code Owner 等限制见仓库设置。
+name: Auto-approve dev → main PRs
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened]
+    branches:
+      - main
+
+permissions:
+  contents: read
+  pull-requests: write
+
+jobs:
+  auto-approve:
+    name: Approve PR
+    runs-on: ubuntu-latest
+    if: github.head_ref == 'dev' && github.event.pull_request.head.repo.fork == false
+    steps:
+      - uses: actions/github-script@v7
+        with:
+          script: |
+            const pr = context.payload.pull_request;
+            const { owner, repo } = context.repo;
+
+            const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
+            let detail = await github.rest.pulls.get({
+              owner,
+              repo,
+              pull_number: pr.number
+            });
+            for (let i = 0; i < 12 && detail.data.mergeable === null; i++) {
+              await sleep(3000);
+              detail = await github.rest.pulls.get({
+                owner,
+                repo,
+                pull_number: pr.number
+              });
+            }
+            const { mergeable, mergeable_state: state } = detail.data;
+            if (mergeable !== true) {
+              core.warning(
+                `Skip approve: mergeable=${mergeable}, mergeable_state=${state} (conflicts or not mergeable)`
+              );
+              return;
+            }
+
+            const { data: reviews } = await github.rest.pulls.listReviews({
+              owner,
+              repo,
+              pull_number: pr.number,
+              per_page: 100
+            });
+            const botLogin = 'github-actions[bot]';
+            const botReviews = reviews
+              .filter((r) => r.user?.login === botLogin && r.submitted_at)
+              .sort(
+                (a, b) =>
+                  new Date(a.submitted_at).getTime() -
+                  new Date(b.submitted_at).getTime()
+              );
+            const latest = botReviews[botReviews.length - 1];
+            if (
+              latest?.state === 'APPROVED' &&
+              latest.commit_id === pr.head.sha
+            ) {
+              core.info('Already approved for current head; skipping.');
+              return;
+            }
+            await github.rest.pulls.createReview({
+              owner,
+              repo,
+              pull_number: pr.number,
+              event: 'APPROVE',
+              body: '自动审批（工作流）：dev → main'
+            });
