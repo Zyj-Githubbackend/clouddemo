@@ -1,0 +1,99 @@
+# 当 PR 为 dev → main 时，在「可合并、无冲突」的前提下自动 Approve。
+#
+# 若报错「GitHub Actions is not permitted to approve pull requests」：
+# 1) 仓库 Settings → Actions → General → Workflow permissions：
+#    勾选「Read and write」并勾选「Allow GitHub Actions to create and approve pull requests」后保存。
+# 2) 若组织禁止上述项：在仓库 Secrets 添加 GH_PR_APPROVE_TOKEN（需含读 PR、提交 review；
+#    使用 PAT 时会调用 /user 解析审批人账号；默认 GITHUB_TOKEN 不能访问 /user，脚本会固定按
+#    github-actions[bot] 做去重）。
+#
+# - mergeable 为 false / mergeable_state 为 dirty：不批准（含冲突）。
+# - 不会替代「合并」；分支保护、Code Owner 等见仓库设置。
+name: Auto-approve dev → main PRs
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened]
+    branches:
+      - main
+
+permissions:
+  contents: read
+  pull-requests: write
+
+jobs:
+  auto-approve:
+    name: Approve PR
+    runs-on: ubuntu-latest
+    if: github.head_ref == 'dev' && github.event.pull_request.head.repo.fork == false
+    steps:
+      - uses: actions/github-script@v7
+        with:
+          github-token: ${{ secrets.GH_PR_APPROVE_TOKEN || github.token }}
+          script: |
+            const pr = context.payload.pull_request;
+            const { owner, repo } = context.repo;
+
+            // GITHUB_TOKEN 无权调用 GET /user；用 PAT 时可以取到真实登录名。
+            let approverLogin = 'github-actions[bot]';
+            try {
+              const { data: auth } = await github.rest.users.getAuthenticated();
+              approverLogin = auth.login;
+            } catch (e) {
+              const st = e.status ?? e.response?.status;
+              if (st !== 403) throw e;
+              core.info(
+                'Skip GET /user (GITHUB_TOKEN); dedupe reviews as github-actions[bot]'
+              );
+            }
+
+            const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
+            let detail = await github.rest.pulls.get({
+              owner,
+              repo,
+              pull_number: pr.number
+            });
+            for (let i = 0; i < 12 && detail.data.mergeable === null; i++) {
+              await sleep(3000);
+              detail = await github.rest.pulls.get({
+                owner,
+                repo,
+                pull_number: pr.number
+              });
+            }
+            const { mergeable, mergeable_state: state } = detail.data;
+            if (mergeable !== true) {
+              core.warning(
+                `Skip approve: mergeable=${mergeable}, mergeable_state=${state} (conflicts or not mergeable)`
+              );
+              return;
+            }
+
+            const { data: reviews } = await github.rest.pulls.listReviews({
+              owner,
+              repo,
+              pull_number: pr.number,
+              per_page: 100
+            });
+            const myReviews = reviews
+              .filter((r) => r.user?.login === approverLogin && r.submitted_at)
+              .sort(
+                (a, b) =>
+                  new Date(a.submitted_at).getTime() -
+                  new Date(b.submitted_at).getTime()
+              );
+            const latest = myReviews[myReviews.length - 1];
+            if (
+              latest?.state === 'APPROVED' &&
+              latest.commit_id === pr.head.sha
+            ) {
+              core.info('Already approved for current head; skipping.');
+              return;
+            }
+            await github.rest.pulls.createReview({
+              owner,
+              repo,
+              pull_number: pr.number,
+              event: 'APPROVE',
+              body: '自动审批（工作流）：dev → main'
+            });
