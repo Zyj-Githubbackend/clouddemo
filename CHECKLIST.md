@@ -41,6 +41,7 @@
 - [ ] `src/main/java/org/example/entity/Registration.java`
 - [ ] `src/main/java/org/example/dto/ActivityCreateRequest.java`
 - [ ] `src/main/java/org/example/dto/AIGenerateRequest.java`
+- [ ] `src/main/java/org/example/dto/ActivityRegisteredCount.java`
 - [ ] `src/main/java/org/example/vo/ActivityVO.java`
 - [ ] `src/main/java/org/example/vo/RegistrationVO.java`（含 `confirmTime` 字段）
 - [ ] `src/main/java/org/example/mapper/ActivityMapper.java`
@@ -75,6 +76,7 @@
 - [ ] `QUICKSTART.md`
 - [ ] `PROJECT_SUMMARY.md`
 - [ ] `DIRECTORY_STRUCTURE.md`
+- [ ] `CHECKLIST.md`（本文件）
 
 ### 启动脚本
 - [ ] `start-all.bat`
@@ -82,6 +84,7 @@
 
 ### 目录结构
 - [ ] `database/` 目录存在
+- [ ] `frontend/` 目录存在（Vue 3 前端）
 - [ ] `logs/` 目录存在
 - [ ] `services/` 目录存在
 
@@ -249,7 +252,7 @@ curl -X POST http://localhost:9000/user/register \
     "email": "test001@university.edu"
   }'
 ```
-- [ ] 返回: `{"code":200,"message":"注册成功"}`
+- [ ] 返回: `code=200`，`message` 为 **操作成功**（`Result.success()` 默认文案）
 
 #### 用户登录接口
 ```bash
@@ -280,7 +283,7 @@ curl -X GET http://localhost:9000/user/info \
 curl -X POST http://localhost:9000/activity/register/1 \
   -H "Authorization: Bearer $TOKEN"
 ```
-- [ ] 返回: code=200, message="报名成功"
+- [ ] 返回: `code=200`，`message` 为 **操作成功**
 
 #### 我的报名记录（需要登录）
 ```bash
@@ -289,10 +292,18 @@ curl -X GET http://localhost:9000/activity/myRegistrations \
 ```
 - [ ] 返回: code=200, 包含报名列表
 
+#### 管理员时长列表（需管理员 Token）
+```bash
+curl -X GET "http://localhost:9000/user/admin/hours" \
+  -H "Authorization: Bearer $ADMIN_TOKEN"
+```
+- [ ] 返回: `code=200`，`data` 为志愿者列表（含 `totalVolunteerHours`）
+
 ### 权限测试
 - [ ] 未登录访问 /user/info 返回401
 - [ ] 普通用户访问 /activity/create 返回403
 - [ ] 管理员可以访问 /activity/create
+- [ ] 普通用户访问 /user/admin/hours 返回403
 
 ### Redis测试
 - [ ] 报名活动时Redis库存正常递减
@@ -327,10 +338,11 @@ curl -X GET http://localhost:9000/activity/myRegistrations \
 ## 📖 文档检查
 
 - [ ] README.md 内容完整，格式正确
-- [ ] ARCHITECTURE.md 架构图清晰
+- [ ] ARCHITECTURE.md 架构图清晰，版本与模块描述与代码一致
 - [ ] DEPLOY.md 部署步骤详细
 - [ ] API_TEST.md 接口示例完整
 - [ ] QUICKSTART.md 快速启动步骤清楚
+- [ ] PROJECT_SUMMARY.md、DIRECTORY_STRUCTURE.md、CHECKLIST.md 与当前数据规模一致
 
 ---
 
@@ -393,8 +405,8 @@ curl -X GET http://localhost:9000/activity/myRegistrations \
 5. [ ] 学习服务监控与治理
 
 ### 开发扩展
-1. [ ] 开发前端界面（Vue3）
-2. [ ] 添加更多业务功能
+1. [ ] 前端已具备（`frontend/`，Vue3 + Element Plus）；可继续优化交互与无障碍
+2. [ ] 添加更多业务功能（评价、证书、消息通知等）
 3. [ ] 集成消息队列（RocketMQ）
 4. [ ] 实现分布式事务（Seata）
 5. [ ] 添加限流降级（Sentinel）

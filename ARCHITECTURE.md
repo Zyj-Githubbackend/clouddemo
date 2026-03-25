@@ -17,7 +17,7 @@
 ```
 ┌─────────────────────────────────────────────────────────────┐
 │                         前端层 (Vue3)                         │
-│                  Element Plus + Axios                        │
+│           Element Plus + Axios + Pinia + ECharts            │
 └─────────────────────┬───────────────────────────────────────┘
                       │ HTTP/REST
 ┌─────────────────────▼───────────────────────────────────────┐
@@ -26,7 +26,7 @@
 │        │  - 路由转发                           │            │
 │        │  - JWT全局鉴权                        │            │
 │        │  - 跨域处理                           │            │
-│        │  - 限流降级                           │            │
+│        │  - （可扩展：Sentinel 限流降级）      │            │
 │        └──────────────────────────────────────┘            │
 └───────┬─────────────────────────────────┬──────────────────┘
         │                                 │
@@ -37,7 +37,7 @@
 │  ┌─────────────────┐ │        │  ┌──────────────────────┐  │
 │  │ - 用户注册/登录  │ │        │  │ - 活动发布/管理       │  │
 │  │ - JWT生成       │ │        │  │ - 报名管理(防超卖)    │  │
-│  │ - 信息维护      │ │◄───────┤  │ - 时长核销           │  │
+│  │ - 管理员时长汇总 │ │◄───────┤  │ - 时长核销           │  │
 │  │ - 时长累计      │ │ Feign  │  │ - AI文案生成         │  │
 │  └─────────────────┘ │        │  └──────────────────────┘  │
 └───────┬──────────────┘        └─────────┬──────────────────┘
@@ -69,13 +69,14 @@
 | 层次 | 技术 | 版本 | 说明 |
 |------|------|------|------|
 | 基础框架 | Spring Boot | 3.3.4 | 简化开发配置 |
-| 微服务框架 | Spring Cloud Alibaba | 2023.0.3.2 | 服务治理 |
+| Spring Cloud | BOM | 2023.0.3 | 与 Boot 对齐的组件版本 |
+| 微服务框架 | Spring Cloud Alibaba | 2023.0.3.2 | Nacos 等服务治理 |
 | 注册中心 | Nacos | 2.x | 服务注册与发现 |
-| API网关 | Spring Cloud Gateway | 2023.0.3 | 统一入口 |
-| 数据库 | MySQL | 8.0.45 | 关系型数据库 |
-| ORM框架 | MyBatis-Plus | 3.5.5 | 简化CRUD |
-| 缓存 | Redis | 5.0+ | 防超卖、限流 |
-| 服务调用 | OpenFeign | 4.0 | 声明式HTTP客户端 |
+| API网关 | Spring Cloud Gateway | 4.1.x（随 BOM） | 统一入口 |
+| 数据库 | MySQL | 8.0+ | 关系型数据库；JDBC 驱动 `mysql-connector-j` 8.0.33 |
+| ORM框架 | MyBatis-Plus | 3.5.9 | `mybatis-plus-spring-boot3-starter` |
+| 缓存 | Redis | 5.0+ | 防超卖、分布式锁 |
+| 服务调用 | OpenFeign | 4.1.x（随 BOM） | 声明式 HTTP 客户端 |
 | 监控 | Spring Boot Admin | 3.3.4 | 服务监控 |
 | 认证 | JWT | 0.11.5 | 无状态认证 |
 | 日志 | SLF4J + Logback | - | 日志框架 |
@@ -93,7 +94,8 @@
 ```
 cloud-demo/
 ├── database/                      # 数据库脚本
-│   └── init.sql                   # 全量初始化（DROP/CREATE 库、表、视图、示例数据）
+│   └── init.sql                   # 全量初始化约 446 行（DROP/CREATE 库、表、视图；11 用户 / 20 活动 / 54 报名）
+├── frontend/                      # Vue 3 + Vite + Element Plus（开发端口 3000）
 ├── logs/                          # 日志目录
 ├── services/                      # 服务模块
 │   ├── pom.xml                    # 微服务父 POM（子模块：common + 各服务）
@@ -114,15 +116,15 @@ cloud-demo/
 │   │   ├── vo/                    # LoginResponse, UserInfo
 │   │   ├── mapper/                # UserMapper
 │   │   ├── service/               # UserService
-│   │   └── controller/            # UserController、InternalUserController（Feign 更新时长）
+│   │   └── controller/            # UserController（含 /user/admin/hours）、InternalUserController（POST /user/updateHours）
 │   ├── activity-service/          # 活动服务
 │   │   ├── entity/                # Activity, Registration
-│   │   ├── dto/                   # ActivityCreateRequest, AIGenerateRequest
+│   │   ├── dto/                   # ActivityCreateRequest, AIGenerateRequest, ActivityRegisteredCount
 │   │   ├── vo/                    # ActivityVO, RegistrationVO
 │   │   ├── mapper/                # ActivityMapper, RegistrationMapper
-│   │   │   ├── service/               # ActivityService, AIService, ActivityScheduleValidator
+│   │   ├── service/               # ActivityService, AIService, ActivityScheduleValidator
 │   │   ├── feign/                 # UserServiceClient
-│   │   └── controller/            # ActivityController
+│   │   └── controller/            # ActivityController（列表招募阶段筛选、签到/核销/活动生命周期等）
 │   ├── monitor-service/           # 监控服务
 │   │   └── MonitorApplication     # Spring Boot Admin Server
 ├── pom.xml                        # 根父 POM（仅聚合 module services）
@@ -131,6 +133,9 @@ cloud-demo/
 ├── ARCHITECTURE.md
 ├── API_TEST.md
 ├── DEPLOY.md
+├── PROJECT_SUMMARY.md
+├── DIRECTORY_STRUCTURE.md
+├── CHECKLIST.md
 ├── .github/workflows/             # GitHub Actions
 ├── start-all.bat
 ├── start-all.sh
@@ -170,6 +175,7 @@ cloud-demo/
 - `registration_start_time`: 招募开始时间
 - `registration_deadline`: 报名截止时间
 - `category`: 校园服务、公益助学、社区关怀、大型活动、环保公益、应急救援
+- **列表筛选**: 网关公开接口 `GET /activity/list` 支持 `status`、`category`、**`recruitmentPhase`**（`NOT_STARTED` / `RECRUITING` / `ENDED`），与前端招募状态筛选一致
 
 #### vol_registration
 - `check_in_status`: 0-未签到 / 1-已签到（管理员在签到模块标记）
@@ -215,9 +221,9 @@ cloud-demo/
 
 ### 权限控制
 
-1. **白名单机制**: 登录、注册、活动列表无需认证
-2. **角色验证**: Controller层检查X-User-Role
-3. **资源隔离**: 用户只能访问自己的数据
+1. **白名单机制**: 网关 `AuthFilter` 对路径做 **前缀匹配**——以 `/user/login`、`/user/register`、`/activity/list` 开头的请求无需 Token（含带查询参数的活动列表 URL）
+2. **角色验证**: Controller 层检查 `X-User-Role`（由网关注入）
+3. **资源隔离**: 用户仅能访问自己的数据；内部接口 `POST /user/updateHours` 仅供 Feign 服务间调用
 
 ## ⚡ 高并发设计
 
@@ -254,11 +260,11 @@ activityMapper.incrementParticipants(activityId);
 ### 智能文案生成
 
 ```java
-// 输入
+// 输入（类型与种子数据一致时可写「应急救援」等）
 {
   "location": "校医院门口",
-  "category": "社区关怀",
-  "keywords": "献血车, 爱心服务, 周六"
+  "category": "应急救援",
+  "keywords": "献血宣传, 引导, 周六"
 }
 
 // AI处理（DeepSeek，OpenAI 兼容接口）
@@ -266,8 +272,8 @@ activityMapper.incrementParticipants(activityId);
 //       环境变量 DEEPSEEK_API_KEY；模型 deepseek-chat / deepseek-reasoner
 Prompt: "请为校园志愿活动生成招募文案..."
 
-// 输出
-"【社区关怀】志愿服务活动火热招募中！
+// 输出（示例，实际以模型或模板为准）
+"【应急救援】志愿服务活动火热招募中！
 活动地点：校医院门口
 在这里，你将有机会用实际行动践行志愿精神..."
 ```
@@ -322,8 +328,8 @@ Prompt: "请为校园志愿活动生成招募文案..."
 
 ## 🔄 后续扩展方向
 
-1. **管理端增强**: 例如报名数据导出、分页筛选、批量操作等
-2. **消息队列**: RocketMQ异步处理时长核销
+1. **管理端增强**: 报名导出、更丰富的统计报表、批量操作等
+2. **消息队列**: RocketMQ 异步通知（报名成功、核销完成等）
 3. **分布式事务**: Seata保证跨服务事务一致性
 4. **限流降级**: Sentinel实现网关流控
 5. **配置中心**: Nacos Config动态配置
