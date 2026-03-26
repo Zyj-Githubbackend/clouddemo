@@ -9,6 +9,7 @@ import org.example.entity.User;
 import org.example.mapper.UserMapper;
 import org.example.vo.LoginResponse;
 import org.example.vo.UserInfo;
+import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.beans.BeanUtils;
 import org.springframework.stereotype.Service;
 import org.springframework.util.StringUtils;
@@ -16,11 +17,14 @@ import org.springframework.util.StringUtils;
 import java.math.BigDecimal;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.regex.Pattern;
 
 @Service
 public class UserService {
     
     private final UserMapper userMapper;
+    private final BCryptPasswordEncoder passwordEncoder = new BCryptPasswordEncoder();
+    private static final Pattern BCRYPT_PATTERN = Pattern.compile("^\\$2[aby]\\$\\d{2}\\$[./0-9A-Za-z]{53}$");
     
     public UserService(UserMapper userMapper) {
         this.userMapper = userMapper;
@@ -35,8 +39,13 @@ public class UserService {
             throw new BusinessException("用户名或密码错误");
         }
         
-        if (!checkPassword(request.getPassword(), user.getPassword())) {
+        PasswordCheckResult passwordCheck = checkPassword(request.getPassword(), user.getPassword());
+        if (!passwordCheck.matches()) {
             throw new BusinessException("用户名或密码错误");
+        }
+        if (passwordCheck.shouldUpgradeHash()) {
+            user.setPassword(encodePassword(request.getPassword()));
+            userMapper.updateById(user);
         }
         
         if (user.getStatus() == 0) {
@@ -115,11 +124,33 @@ public class UserService {
     }
     
     private String encodePassword(String rawPassword) {
-        return "$2a$10$" + rawPassword;
+        return passwordEncoder.encode(rawPassword);
     }
     
-    private boolean checkPassword(String rawPassword, String encodedPassword) {
-        return encodedPassword.equals("$2a$10$" + rawPassword) || 
-               encodedPassword.equals("$2a$10$N.zmdr9k7uOCQb376NoUnuTJ8iAt6Z5EHsM8lE9lBOsl7iAt6Z5EH");
+    private PasswordCheckResult checkPassword(String rawPassword, String encodedPassword) {
+        if (encodedPassword == null) {
+            return PasswordCheckResult.noMatch();
+        }
+        // 1) Standard BCrypt
+        if (BCRYPT_PATTERN.matcher(encodedPassword).matches()) {
+            return passwordEncoder.matches(rawPassword, encodedPassword)
+                    ? PasswordCheckResult.matchNoUpgrade()
+                    : PasswordCheckResult.noMatch();
+        }
+        // 2) Legacy demo formats (auto-upgrade on successful login)
+        if (encodedPassword.equals(rawPassword) || encodedPassword.equals("$2a$10$" + rawPassword)) {
+            return PasswordCheckResult.matchUpgrade();
+        }
+        // 3) Legacy special-cased value (kept for backward compatibility; upgrade after match)
+        if (encodedPassword.equals("$2a$10$N.zmdr9k7uOCQb376NoUnuTJ8iAt6Z5EHsM8lE9lBOsl7iAt6Z5EH")) {
+            return PasswordCheckResult.matchUpgrade();
+        }
+        return PasswordCheckResult.noMatch();
+    }
+
+    private record PasswordCheckResult(boolean matches, boolean shouldUpgradeHash) {
+        static PasswordCheckResult noMatch() { return new PasswordCheckResult(false, false); }
+        static PasswordCheckResult matchUpgrade() { return new PasswordCheckResult(true, true); }
+        static PasswordCheckResult matchNoUpgrade() { return new PasswordCheckResult(true, false); }
     }
 }
