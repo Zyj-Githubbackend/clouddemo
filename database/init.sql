@@ -105,20 +105,20 @@ GROUP BY a.id, a.title, a.category, a.status, a.max_participants,
 
 -- ==============================================================================
 -- 5. 测试数据 — 用户（1 管理员 + 10 志愿者）
---    密码均为 password123（demo 项目直接存储，生产需 BCrypt）
+--    密码均为 password123（此处已使用 BCrypt 哈希存储；同一明文每行哈希不同属正常现象；生产可配合密码策略）
 -- ==============================================================================
 INSERT INTO sys_user (username, password, real_name, student_no, phone, email, role, total_volunteer_hours) VALUES
-('admin',     'password123', '管理员',   '2021000', '13800138000', 'admin@university.edu',     'ADMIN',     0.00),
-('student01', 'password123', '张三',     '2021101', '13800138001', 'zhangsan@university.edu',  'VOLUNTEER', 11.0),
-('student02', 'password123', '李四',     '2021102', '13800138002', 'lisi@university.edu',      'VOLUNTEER',  6.0),
-('student03', 'password123', '王五',     '2021103', '13800138003', 'wangwu@university.edu',    'VOLUNTEER',  4.0),
-('student04', 'password123', '赵六',     '2021104', '13800138004', 'zhaoliu@university.edu',  'VOLUNTEER',  3.0),
-('student05', 'password123', '陈七',     '2021105', '13800138005', 'chenqi@university.edu',   'VOLUNTEER',  5.5),
-('student06', 'password123', '周八',     '2021106', '13800138006', 'zhouba@university.edu',   'VOLUNTEER',  2.0),
-('student07', 'password123', '吴九',     '2022101', '13800138007', 'wujiu@university.edu',    'VOLUNTEER',  0.00),
-('student08', 'password123', '郑十',     '2022102', '13800138008', 'zhengshi@university.edu', 'VOLUNTEER',  0.00),
-('student09', 'password123', '孙晓明',   '2022103', '13800138009', 'sunxm@university.edu',    'VOLUNTEER',  0.00),
-('student10', 'password123', '林小红',   '2022104', '13800138010', 'linxh@university.edu',    'VOLUNTEER',  0.00);
+('admin',     '$2a$10$Eo9wO/cEgteDMRV7ApcPbuxTGF.VUKK6yyfzuLyKPBHdwGVvQtKEG', '管理员',   '2021000', '13800138000', 'admin@university.edu',     'ADMIN',     0.00),
+('student01', '$2a$10$0QNp9cTcnPH3.VA0nRZSMOOUXv2B.cLrH.YLufbmm4iSHh.VIqoqu', '张三',     '2021101', '13800138001', 'zhangsan@university.edu',  'VOLUNTEER', 11.0),
+('student02', '$2a$10$fwfXbjTqpn.41DkosvLt0.n76S8qPmWTKFbimvQHktXgzRdkrCzK6', '李四',     '2021102', '13800138002', 'lisi@university.edu',      'VOLUNTEER',  6.0),
+('student03', '$2a$10$iIzceUj4s1OtwDzlsN8Q2.4SOCM1bNKD5sBfqh6tHYh3Wb/zBIuLy', '王五',     '2021103', '13800138003', 'wangwu@university.edu',    'VOLUNTEER',  4.0),
+('student04', '$2a$10$IkxoIFHQDh0oV2gi1EfBc.OLhcGJMrqmWfQxrtRSOfQkDzV1HFWR2', '赵六',     '2021104', '13800138004', 'zhaoliu@university.edu',  'VOLUNTEER',  3.0),
+('student05', '$2a$10$i3RtDFjb0cyCfLwziQC.0uIqr7OIDFTie0zCS28KUNjf4jEnH7zNa', '陈七',     '2021105', '13800138005', 'chenqi@university.edu',   'VOLUNTEER',  5.5),
+('student06', '$2a$10$06D9fUwHBvf.RPZqF5AuDe5/vYXne/JIJtbfGxA7xN4/KWZ4RZLjm', '周八',     '2021106', '13800138006', 'zhouba@university.edu',   'VOLUNTEER',  2.0),
+('student07', '$2a$10$T41owGyvTabpLqHnJAPp..Ux7oXGwL006wdwZSrXsi1BC2SQpQxqW', '吴九',     '2022101', '13800138007', 'wujiu@university.edu',    'VOLUNTEER',  0.00),
+('student08', '$2a$10$/Q4nPMVtRRs/C0R/fXV6te6y5nx5M8gCaP83HAKe.4JZs7E.Mbqlu', '郑十',     '2022102', '13800138008', 'zhengshi@university.edu', 'VOLUNTEER',  0.00),
+('student09', '$2a$10$hRHyyTD3p6vl0bA/GlSqLOP13oYGSPco6ZXhXsc3Lpvw0SeOtoB4u', '孙晓明',   '2022103', '13800138009', 'sunxm@university.edu',    'VOLUNTEER',  0.00),
+('student10', '$2a$10$vtweHP2zt1bs2nTKmYnEJ.RSIeGxrutpWqsaj/coxakFdDi2s4H72', '林小红',   '2022104', '13800138010', 'linxh@university.edu',    'VOLUNTEER',  0.00);
 
 -- ==============================================================================
 -- 6. 测试数据 — 志愿活动（20 条，覆盖所有状态与时间场景）
