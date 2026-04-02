@@ -39,7 +39,13 @@ const routes = [
     path: '/my',
     name: 'My',
     component: () => import('@/views/MyCenter.vue'),
-    meta: { title: '个人中心', requireAuth: true }
+    meta: { title: '我的志愿足迹', requireAuth: true }
+  },
+  {
+    path: '/profile',
+    name: 'Profile',
+    component: () => import('@/views/Profile.vue'),
+    meta: { title: '个人资料', requireAuth: true }
   },
   {
     path: '/admin',
@@ -93,13 +99,29 @@ router.beforeEach((to, from, next) => {
   const token = localStorage.getItem('token')
   const userInfo = JSON.parse(localStorage.getItem('userInfo') || '{}')
   
+  // 如果需要登录且没有token，跳转到登录页
   if (to.meta.requireAuth && !token) {
     next('/login')
-  } else if (to.meta.requireAdmin && userInfo.role !== 'ADMIN') {
-    next('/home')
-  } else {
-    next()
+    return
   }
+  
+  // 如果需要管理员权限但不是管理员，跳转到首页
+  if (to.meta.requireAdmin && userInfo.role !== 'ADMIN') {
+    next('/home')
+    return
+  }
+  
+  // 如果已经登录但访问登录/注册页面，跳转到首页
+  if (token && (to.path === '/login' || to.path === '/register')) {
+    next('/home')
+    return
+  }
+  
+  // 检查 token 是否有效（可选：增加后端验证）
+  // 如果需要更严格的 token 验证，可以在这里添加
+  // 例如：调用后端接口验证 token 是否有效
+  
+  next()
 })
 
 export default router

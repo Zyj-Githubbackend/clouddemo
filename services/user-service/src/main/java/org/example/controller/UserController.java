@@ -9,6 +9,7 @@ import org.example.vo.UserInfo;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
+import java.util.Map;
 
 @RestController
 @RequestMapping("/user")
@@ -36,6 +37,24 @@ public class UserController {
     public Result<UserInfo> getUserInfo(@RequestHeader("X-User-Id") Long userId) {
         UserInfo userInfo = userService.getUserInfo(userId);
         return Result.success(userInfo);
+    }
+    
+    @PutMapping("/update")
+    public Result<Void> updateUserInfo(
+            @RequestBody UserInfo userInfo,
+            @RequestHeader("X-User-Id") Long userId) {
+        userService.updateUserInfo(userId, userInfo);
+        return Result.success();
+    }
+    
+    @PutMapping("/updatePassword")
+    public Result<Void> updatePassword(
+            @RequestBody Map<String, String> params,
+            @RequestHeader("X-User-Id") Long userId) {
+        String oldPassword = params.get("oldPassword");
+        String newPassword = params.get("newPassword");
+        userService.updatePassword(userId, oldPassword, newPassword);
+        return Result.success();
     }
 
     /**

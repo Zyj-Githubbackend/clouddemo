@@ -26,6 +26,24 @@ export const getUserInfo = () => {
   })
 }
 
+// 更新用户信息
+export const updateUserInfo = (data) => {
+  return request({
+    url: '/user/update',
+    method: 'put',
+    data
+  })
+}
+
+// 修改密码
+export const updatePassword = (data) => {
+  return request({
+    url: '/user/updatePassword',
+    method: 'put',
+    data
+  })
+}
+
 // 管理员：查询所有志愿者时长（支持 keyword 关键字筛选）
 export const getVolunteerHoursList = (keyword = '') => {
   return request({

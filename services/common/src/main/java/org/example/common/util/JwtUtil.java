@@ -14,7 +14,9 @@ import java.util.Map;
 public class JwtUtil {
     
     private static final String SECRET_KEY = "volunteerPlatformSecretKey2024ForJWTTokenGeneration";
-    private static final long EXPIRATION_TIME = 86400000; // 24小时
+    private static final long EXPIRATION_TIME = 86400000; // 24小时（单位：毫秒）
+    // 可选：测试时可以设置为更短的时间，例如 5 分钟 = 300000 毫秒
+    // private static final long EXPIRATION_TIME = 300000;
     
     private static Key getSigningKey() {
         return Keys.hmacShaKeyFor(SECRET_KEY.getBytes(StandardCharsets.UTF_8));

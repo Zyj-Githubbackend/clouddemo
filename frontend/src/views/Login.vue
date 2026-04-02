@@ -19,7 +19,7 @@
         <el-form-item prop="username">
           <el-input 
             v-model="form.username" 
-            placeholder="请输入用户名/学号"
+            placeholder="请输入用户名"
             size="large"
             clearable
           >
