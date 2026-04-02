@@ -27,8 +27,8 @@
             <span>志愿活动</span>
           </el-menu-item>
           <el-menu-item index="/my">
-            <el-icon><User /></el-icon>
-            <span>个人中心</span>
+            <el-icon><Stamp /></el-icon>
+            <span>我的志愿足迹</span>
           </el-menu-item>
           <el-menu-item v-if="userStore.isAdmin" index="/admin/activities">
             <el-icon><Setting /></el-icon>
@@ -50,7 +50,11 @@
                   <el-icon><User /></el-icon>
                   个人资料
                 </el-dropdown-item>
-                <el-dropdown-item command="logout" divided>
+                <el-dropdown-item command="myRegistrations" divided>
+                  <el-icon><List /></el-icon>
+                  我的报名
+                </el-dropdown-item>
+                <el-dropdown-item command="logout">
                   <el-icon><SwitchButton /></el-icon>
                   退出登录
                 </el-dropdown-item>
@@ -93,14 +97,18 @@
             <span>志愿活动</span>
           </el-menu-item>
           <el-menu-item index="/my">
-            <el-icon><User /></el-icon>
-            <span>个人中心</span>
+            <el-icon><Stamp /></el-icon>
+            <span>我的志愿足迹</span>
           </el-menu-item>
           <el-menu-item v-if="userStore.isAdmin" index="/admin/activities">
             <el-icon><Setting /></el-icon>
             <span>管理后台</span>
           </el-menu-item>
           <el-divider />
+          <el-menu-item @click="handleCommand('myRegistrations')">
+            <el-icon><List /></el-icon>
+            <span>我的报名</span>
+          </el-menu-item>
           <el-menu-item @click="handleCommand('logout')">
             <el-icon><SwitchButton /></el-icon>
             <span>退出登录</span>
@@ -159,6 +167,8 @@ const handleCommand = (command) => {
       router.push('/login')
     }).catch(() => {})
   } else if (command === 'profile') {
+    router.push('/profile')
+  } else if (command === 'myRegistrations') {
     router.push('/my')
   }
 }

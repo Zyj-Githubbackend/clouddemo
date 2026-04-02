@@ -267,7 +267,12 @@ const handleAIGenerate = async () => {
   }
   aiLoading.value = true
   try {
-    const res = await generateDescription({ location: form.location, category: form.category, keywords: aiKeywords.value })
+    const res = await generateDescription({ 
+      location: form.location, 
+      category: form.category, 
+      keywords: aiKeywords.value,
+      volunteerHours: form.volunteerHours 
+    })
     form.description = res.data
     ElMessage.success('AI 生成成功')
   } catch (error) {

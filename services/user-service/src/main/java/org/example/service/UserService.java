@@ -96,6 +96,44 @@ public class UserService {
         return userInfo;
     }
     
+    public void updateUserInfo(Long userId, UserInfo userInfo) {
+        User user = userMapper.selectById(userId);
+        if (user == null) {
+            throw new BusinessException("用户不存在");
+        }
+        
+        if (userInfo.getRealName() != null) {
+            user.setRealName(userInfo.getRealName());
+        }
+        if (userInfo.getPhone() != null) {
+            user.setPhone(userInfo.getPhone());
+        }
+        if (userInfo.getEmail() != null) {
+            user.setEmail(userInfo.getEmail());
+        }
+        
+        userMapper.updateById(user);
+    }
+    
+    public void updatePassword(Long userId, String oldPassword, String newPassword) {
+        User user = userMapper.selectById(userId);
+        if (user == null) {
+            throw new BusinessException("用户不存在");
+        }
+        
+        PasswordCheckResult result = checkPassword(oldPassword, user.getPassword());
+        if (!result.matches()) {
+            throw new BusinessException("旧密码错误");
+        }
+        
+        if (newPassword == null || newPassword.length() < 6) {
+            throw new BusinessException("新密码长度不能少于6位");
+        }
+        
+        user.setPassword(encodePassword(newPassword));
+        userMapper.updateById(user);
+    }
+    
     /**
      * 管理员：查询所有志愿者时长；支持按姓名/学号/用户名模糊筛选；按累计时长降序。
      */
