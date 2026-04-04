@@ -22,6 +22,18 @@
 - [ ] `/api/` 已转发到网关
 - [ ] `/monitor/` 已转发到监控后台
 
+## Docker 部署
+
+- [ ] `docker-compose.yml` 已存在并可被 `docker compose config` 正确解析
+- [ ] Docker Engine 已启动
+- [ ] `docker compose up --build -d` 可执行
+- [ ] `http://localhost:8080/` 可访问
+- [ ] `http://localhost:8080/monitor/` 可访问
+- [ ] `http://localhost:9001/actuator/health` 返回 `UP`
+- [ ] `http://localhost:9101/actuator/health` 返回 `UP`
+- [ ] `http://localhost:8849/nacos/` 可访问
+- [ ] Docker 页面和接口返回的中文未出现乱码
+
 ## 页面访问
 
 - [ ] `http://localhost/` 可访问

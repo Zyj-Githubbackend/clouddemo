@@ -139,3 +139,30 @@ curl -X POST http://127.0.0.1:9000/user/login \
 
 - 检查 Windows 防火墙
 - 检查是否使用了正确的校园网 IPv4 地址
+
+## Docker 快速启动
+
+如果你希望整套环境通过 Docker 运行：
+
+```bash
+docker compose up --build -d
+```
+
+访问地址：
+
+- 前台：`http://localhost:8080/`
+- 监控后台：`http://localhost:8080/monitor/`
+- 网关直连：`http://localhost:9001`
+- 监控直连：`http://localhost:9101`
+- Nacos：`http://localhost:8849/nacos`
+
+如果命令提示无法连接 Docker Engine，请先启动 Docker Desktop。
+
+如果 Docker 版本页面里的中文已经出现乱码，说明旧的 MySQL 数据卷中已经写入了错误编码的数据。请执行：
+
+```bash
+docker compose down -v
+docker compose up --build -d
+```
+
+然后再访问 `http://localhost:8080/` 验证中文是否恢复正常。

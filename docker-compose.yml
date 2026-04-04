@@ -1,0 +1,139 @@
+services:
+  mysql:
+    image: mysql:8.0
+    container_name: cloud-demo-mysql
+    restart: unless-stopped
+    command: --character-set-server=utf8mb4 --collation-server=utf8mb4_unicode_ci
+    environment:
+      MYSQL_ROOT_PASSWORD: 123888
+    volumes:
+      - mysql-data:/var/lib/mysql
+      - ./database/init.sql:/docker-entrypoint-initdb.d/01-init.sql:ro
+    networks:
+      - cloud-demo
+
+  redis:
+    image: redis:7-alpine
+    container_name: cloud-demo-redis
+    restart: unless-stopped
+    networks:
+      - cloud-demo
+
+  nacos:
+    image: nacos/nacos-server:v2.4.2
+    container_name: cloud-demo-nacos
+    restart: unless-stopped
+    environment:
+      MODE: standalone
+      PREFER_HOST_MODE: hostname
+    ports:
+      - "8849:8848"
+    networks:
+      - cloud-demo
+
+  user-service:
+    build:
+      context: .
+      dockerfile: deploy/docker/backend.Dockerfile
+      args:
+        MODULE: user-service
+    container_name: cloud-demo-user-service
+    restart: unless-stopped
+    depends_on:
+      - mysql
+      - nacos
+    environment:
+      SPRING_CLOUD_NACOS_SERVER_ADDR: nacos:8848
+      SPRING_CLOUD_NACOS_DISCOVERY_SERVER_ADDR: nacos:8848
+      SPRING_DATASOURCE_URL: jdbc:mysql://mysql:3306/volunteer_platform?useUnicode=true&characterEncoding=utf-8&useSSL=false&serverTimezone=Asia/Shanghai&allowPublicKeyRetrieval=true
+      SPRING_DATASOURCE_USERNAME: root
+      SPRING_DATASOURCE_PASSWORD: 123888
+      JWT_SECRET: volunteerPlatformSecretKey2024
+      JWT_EXPIRATION: 86400000
+    networks:
+      - cloud-demo
+
+  activity-service:
+    build:
+      context: .
+      dockerfile: deploy/docker/backend.Dockerfile
+      args:
+        MODULE: activity-service
+    container_name: cloud-demo-activity-service
+    restart: unless-stopped
+    depends_on:
+      - mysql
+      - redis
+      - nacos
+    environment:
+      SPRING_CLOUD_NACOS_SERVER_ADDR: nacos:8848
+      SPRING_CLOUD_NACOS_DISCOVERY_SERVER_ADDR: nacos:8848
+      SPRING_DATASOURCE_URL: jdbc:mysql://mysql:3306/volunteer_platform?useUnicode=true&characterEncoding=utf-8&useSSL=false&serverTimezone=Asia/Shanghai&allowPublicKeyRetrieval=true
+      SPRING_DATASOURCE_USERNAME: root
+      SPRING_DATASOURCE_PASSWORD: 123888
+      SPRING_DATA_REDIS_HOST: redis
+      SPRING_DATA_REDIS_PORT: 6379
+      AI_API_KEY: ${DEEPSEEK_API_KEY:-}
+    networks:
+      - cloud-demo
+
+  gateway-service:
+    build:
+      context: .
+      dockerfile: deploy/docker/backend.Dockerfile
+      args:
+        MODULE: gateway-service
+    container_name: cloud-demo-gateway-service
+    restart: unless-stopped
+    depends_on:
+      - nacos
+      - user-service
+      - activity-service
+    environment:
+      SPRING_CLOUD_NACOS_SERVER_ADDR: nacos:8848
+      SPRING_CLOUD_NACOS_DISCOVERY_SERVER_ADDR: nacos:8848
+      JWT_SECRET: volunteerPlatformSecretKey2024
+      JWT_EXPIRATION: 86400000
+    ports:
+      - "9001:9000"
+    networks:
+      - cloud-demo
+
+  monitor-service:
+    build:
+      context: .
+      dockerfile: deploy/docker/backend.Dockerfile
+      args:
+        MODULE: monitor-service
+    container_name: cloud-demo-monitor-service
+    restart: unless-stopped
+    depends_on:
+      - nacos
+    environment:
+      SPRING_CLOUD_NACOS_SERVER_ADDR: nacos:8848
+      SPRING_CLOUD_NACOS_DISCOVERY_SERVER_ADDR: nacos:8848
+    ports:
+      - "9101:9100"
+    networks:
+      - cloud-demo
+
+  frontend:
+    build:
+      context: .
+      dockerfile: frontend/Dockerfile
+    container_name: cloud-demo-frontend
+    restart: unless-stopped
+    depends_on:
+      - gateway-service
+      - monitor-service
+    ports:
+      - "8080:80"
+    networks:
+      - cloud-demo
+
+networks:
+  cloud-demo:
+    driver: bridge
+
+volumes:
+  mysql-data:

@@ -10,6 +10,8 @@
 --   vol_registration.status            REGISTERED / CANCELLED
 -- =============================================================================
 
+SET NAMES utf8mb4;
+
 DROP DATABASE IF EXISTS volunteer_platform;
 CREATE DATABASE volunteer_platform CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
 USE volunteer_platform;
@@ -442,4 +444,3 @@ INSERT INTO vol_registration (user_id, activity_id, registration_time, check_in_
 
 -- 补充历史已核销活动（简化：直接在 vol_registration 中已体现，sys_user 的 total_hours 已包含）
 -- 实际业务中，核销通过 confirmHours 接口触发 Feign 更新用户时长，此处 init.sql 直接设定总量
-

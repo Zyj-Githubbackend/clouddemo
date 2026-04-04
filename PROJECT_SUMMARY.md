@@ -20,12 +20,18 @@
 | `frontend` | Vue 3 前端页面 |
 | `database/init.sql` | 数据库初始化和示例数据 |
 | `deploy/nginx/` | 本机 Nginx 配置 |
+| `deploy/docker/` | 后端通用 Docker 构建文件 |
+| `docker-compose.yml` | 一键启动整套容器环境 |
 
 ## 当前推荐访问方式
 
 - 前台：`http://localhost/`
 - 监控后台：`http://localhost/monitor/`
 - 开发模式前端：`http://localhost:3000`
+- Docker 模式前端：`http://localhost:8080/`
+- Docker 网关直连：`http://localhost:9001`
+- Docker 监控直连：`http://localhost:9101`
+- Docker Nacos：`http://localhost:8849/nacos`
 
 ## 关键配置对齐
 

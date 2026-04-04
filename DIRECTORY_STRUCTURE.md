@@ -5,6 +5,8 @@ cloud-demo/
 ├─ database/
 │  └─ init.sql
 ├─ deploy/
+│  ├─ docker/
+│  │  └─ backend.Dockerfile
 │  └─ nginx/
 │     ├─ cloud-demo.conf
 │     └─ cloud-demo.local.conf
@@ -46,6 +48,11 @@ cloud-demo/
 - 保存仓库内维护的 Nginx 配置
 - `cloud-demo.local.conf` 用于本机部署
 - `cloud-demo.conf` 适合作为更通用的参考版本
+
+### `deploy/docker/`
+
+- 保存后端通用 Docker 构建文件
+- `backend.Dockerfile` 通过 `MODULE` 参数构建不同微服务镜像
 
 ### `services/`
 
