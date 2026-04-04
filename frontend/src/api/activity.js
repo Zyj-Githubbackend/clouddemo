@@ -139,3 +139,16 @@ export const generateDescription = (data) => {
     data
   })
 }
+
+export const uploadActivityImage = (file) => {
+  const formData = new FormData()
+  formData.append('file', file)
+  return request({
+    url: '/activity/admin/image',
+    method: 'post',
+    data: formData,
+    headers: {
+      'Content-Type': 'multipart/form-data'
+    }
+  })
+}

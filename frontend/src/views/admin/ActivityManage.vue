@@ -132,6 +132,14 @@
           <el-form-item label="活动详情" prop="description">
             <el-input v-model="editForm.description" type="textarea" :rows="6" placeholder="活动详情" />
           </el-form-item>
+          <el-form-item label="活动图片">
+            <ActivityImageUploader
+              :image-key="editForm.imageKey"
+              :image-url="editImageUrl"
+              @update:image-key="(value) => { editForm.imageKey = value }"
+              @update:image-url="setEditImageUrl"
+            />
+          </el-form-item>
           <el-form-item label="招募人数" prop="maxParticipants">
             <el-input-number v-model="editForm.maxParticipants" :min="1" :max="500" />
             <span class="form-tip">需大于等于当前已报名人数</span>
@@ -202,6 +210,7 @@ import {
 } from '@/api/activity'
 import { getRecruitmentDisplay } from '@/utils/recruitment'
 import { getActivityPhaseDisplay } from '@/utils/activityPhase'
+import ActivityImageUploader from '@/components/ActivityImageUploader.vue'
 import dayjs from 'dayjs'
 
 const router = useRouter()
@@ -215,12 +224,18 @@ const editFormRef = ref()
 const editingId = ref(null)
 const editAiKeywords = ref('')
 const editAiLoading = ref(false)
+const editImageUrl = ref('')
+
+const setEditImageUrl = (value) => {
+  editImageUrl.value = value
+}
 
 const editForm = reactive({
   title: '',
   category: '',
   location: '',
   description: '',
+  imageKey: '',
   maxParticipants: 20,
   volunteerHours: 2,
   startTime: '',
@@ -334,11 +349,13 @@ const getRowClass = ({ row }) => {
 const resetEditForm = () => {
   editingId.value = null
   editAiKeywords.value = ''
+  editImageUrl.value = ''
   Object.assign(editForm, {
     title: '',
     category: '',
     location: '',
     description: '',
+    imageKey: '',
     maxParticipants: 20,
     volunteerHours: 2,
     startTime: '',
@@ -361,6 +378,7 @@ const openEditDialog = async (row) => {
       category: d.category ?? '',
       location: d.location ?? '',
       description: d.description ?? '',
+      imageKey: d.imageKey ?? '',
       maxParticipants: d.maxParticipants ?? 20,
       volunteerHours: d.volunteerHours != null ? Number(d.volunteerHours) : 2,
       startTime: d.startTime ?? '',
@@ -368,6 +386,7 @@ const openEditDialog = async (row) => {
       registrationStartTime: d.registrationStartTime ?? '',
       registrationDeadline: d.registrationDeadline ?? ''
     })
+    editImageUrl.value = d.imageUrl ?? ''
     await nextTick()
     editFormRef.value?.clearValidate()
   } catch (e) {

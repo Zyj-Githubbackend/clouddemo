@@ -22,7 +22,8 @@ public class AuthFilter implements GlobalFilter, Ordered {
     private static final List<String> WHITE_LIST = Arrays.asList(
         "/user/login",
         "/user/register",
-        "/activity/list"
+        "/activity/list",
+        "/activity/image"
     );
     
     @Override

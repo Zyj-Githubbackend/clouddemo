@@ -34,9 +34,7 @@ services:
   user-service:
     build:
       context: .
-      dockerfile: deploy/docker/backend.Dockerfile
-      args:
-        MODULE: user-service
+      dockerfile: services/user-service/Dockerfile
     container_name: cloud-demo-user-service
     restart: unless-stopped
     depends_on:
@@ -56,15 +54,15 @@ services:
   activity-service:
     build:
       context: .
-      dockerfile: deploy/docker/backend.Dockerfile
-      args:
-        MODULE: activity-service
+      dockerfile: services/activity-service/Dockerfile
     container_name: cloud-demo-activity-service
     restart: unless-stopped
     depends_on:
       - mysql
       - redis
       - nacos
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
     environment:
       SPRING_CLOUD_NACOS_SERVER_ADDR: nacos:8848
       SPRING_CLOUD_NACOS_DISCOVERY_SERVER_ADDR: nacos:8848
@@ -74,15 +72,18 @@ services:
       SPRING_DATA_REDIS_HOST: redis
       SPRING_DATA_REDIS_PORT: 6379
       AI_API_KEY: ${DEEPSEEK_API_KEY:-}
+      MINIO_ENDPOINT: ${MINIO_ENDPOINT:-http://host.docker.internal:9005}
+      MINIO_ACCESS_KEY: ${MINIO_ACCESS_KEY:-root}
+      MINIO_SECRET_KEY: ${MINIO_SECRET_KEY:-12345678}
+      MINIO_BUCKET: ${MINIO_BUCKET:-activity-images}
+      MINIO_PUBLIC_BASE_URL: ${MINIO_PUBLIC_BASE_URL:-/api}
     networks:
       - cloud-demo
 
   gateway-service:
     build:
       context: .
-      dockerfile: deploy/docker/backend.Dockerfile
-      args:
-        MODULE: gateway-service
+      dockerfile: services/gateway-service/Dockerfile
     container_name: cloud-demo-gateway-service
     restart: unless-stopped
     depends_on:
@@ -102,9 +103,7 @@ services:
   monitor-service:
     build:
       context: .
-      dockerfile: deploy/docker/backend.Dockerfile
-      args:
-        MODULE: monitor-service
+      dockerfile: services/monitor-service/Dockerfile
     container_name: cloud-demo-monitor-service
     restart: unless-stopped
     depends_on:

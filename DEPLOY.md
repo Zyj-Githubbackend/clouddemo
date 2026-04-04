@@ -47,6 +47,23 @@ startup.cmd -m standalone
 mvn clean install -DskipTests
 ```
 
+活动图片上传默认已经内置了这组 MinIO 配置，本机直接启动 `ActivityApplication` 即可：
+
+```powershell
+$env:MINIO_ENDPOINT="http://127.0.0.1:9005"
+$env:MINIO_ACCESS_KEY="root"
+$env:MINIO_SECRET_KEY="12345678"
+$env:MINIO_BUCKET="activity-images"
+```
+
+如果你不设置环境变量，`activity-service` 会默认使用上面这组值。
+
+如果数据库不是刚用 `database/init.sql` 初始化，而是已有存量库，请先执行：
+
+```sql
+ALTER TABLE vol_activity ADD COLUMN image_key VARCHAR(255) COMMENT '活动图片对象键';
+```
+
 启动：
 
 - `UserApplication`
@@ -117,6 +134,13 @@ cd D:\nginx-1.28.3
 - `monitor-service`
 - 前端 Nginx 容器
 
+并且每个微服务现在都有独立 Dockerfile，可用于单独构建和发布：
+
+- [services/user-service/Dockerfile](services/user-service/Dockerfile)
+- [services/activity-service/Dockerfile](services/activity-service/Dockerfile)
+- [services/gateway-service/Dockerfile](services/gateway-service/Dockerfile)
+- [services/monitor-service/Dockerfile](services/monitor-service/Dockerfile)
+
 启动命令：
 
 ```bash
@@ -143,7 +167,24 @@ docker compose down
 - Nacos、网关、监控的宿主机端口分别为 `8849`、`9001`、`9101`，避免和本机同名服务冲突
 - 数据库初始化脚本会挂载 `database/init.sql`
 - 如果宿主机已设置 `DEEPSEEK_API_KEY`，Compose 会透传给 `activity-service`
+- 如果 MinIO 跑在宿主机上，Compose 默认使用 `http://host.docker.internal:9005`
+- Compose 默认使用 MinIO 账号 `root`、密码 `12345678`、bucket `activity-images`
+- 如果 MinIO 的账号、密码或 bucket 与默认值不同，请在 `docker compose up` 前设置 `MINIO_ENDPOINT`、`MINIO_ACCESS_KEY`、`MINIO_SECRET_KEY`、`MINIO_BUCKET`
+- 如果你希望这些覆盖值持久保留，建议参考仓库根目录 `.env.example` 创建 `.env`
 - `database/init.sql` 顶部已加入 `SET NAMES utf8mb4;`，用于避免 MySQL 容器初始化时中文按错误字符集导入
+
+### 单独构建某个微服务
+
+如果你不是整套用 Compose，而是要单独发布某个微服务，可以直接在仓库根目录执行：
+
+```bash
+docker build -f services/user-service/Dockerfile -t cloud-demo/user-service:latest .
+docker build -f services/activity-service/Dockerfile -t cloud-demo/activity-service:latest .
+docker build -f services/gateway-service/Dockerfile -t cloud-demo/gateway-service:latest .
+docker build -f services/monitor-service/Dockerfile -t cloud-demo/monitor-service:latest .
+```
+
+随后按你的部署环境，为容器补充对应的数据库、Redis、Nacos、JWT、MinIO 等环境变量即可。
 
 ### Docker 中文乱码修复
 

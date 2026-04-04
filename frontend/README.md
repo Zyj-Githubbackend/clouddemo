@@ -76,6 +76,19 @@ npm run build
 - `src/api/user.js`：用户接口
 - `src/api/activity.js`：活动接口
 
+## 活动图片说明
+
+- 管理端创建活动和编辑活动时，支持上传活动图片
+- 图片上传接口走 `/api/activity/admin/image`
+- 图片展示接口走 `/api/activity/image?objectKey=...`
+- 首页、活动列表、活动详情页都会展示活动相关图片
+
+这意味着：
+
+- 开发模式下需要保留 Vite 的 `/api` 代理
+- 部署模式下需要保留 Nginx 的 `/api/` 反向代理
+- 前端本身不直接访问 MinIO，而是统一通过后端读取图片
+
 ## 常见问题
 
 ### 页面能打开但接口报错

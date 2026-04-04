@@ -1,6 +1,7 @@
 package org.example.service;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
+import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
@@ -36,20 +37,24 @@ public class ActivityService {
     private final RegistrationMapper registrationMapper;
     private final StringRedisTemplate redisTemplate;
     private final UserServiceClient userServiceClient;
+    private final MinioStorageService minioStorageService;
     
     public ActivityService(ActivityMapper activityMapper, 
                           RegistrationMapper registrationMapper,
                           StringRedisTemplate redisTemplate,
-                          UserServiceClient userServiceClient) {
+                          UserServiceClient userServiceClient,
+                          MinioStorageService minioStorageService) {
         this.activityMapper = activityMapper;
         this.registrationMapper = registrationMapper;
         this.redisTemplate = redisTemplate;
         this.userServiceClient = userServiceClient;
+        this.minioStorageService = minioStorageService;
     }
     
     public IPage<ActivityVO> listActivities(Integer page, Integer size, String status, String category,
                                             String recruitmentPhase, Long userId) {
-        LambdaQueryWrapper<Activity> wrapper = new LambdaQueryWrapper<>();
+        QueryWrapper<Activity> queryWrapper = new QueryWrapper<>();
+        LambdaQueryWrapper<Activity> wrapper = queryWrapper.lambda();
 
         if (StringUtils.hasText(status)) {
             wrapper.eq(Activity::getStatus, status);
@@ -75,16 +80,16 @@ public class ActivityService {
             }
         }
 
-        wrapper.orderByAsc(Activity::getRegistrationDeadline);
+        applyActivityListOrdering(queryWrapper, status);
 
         // MyBatis-Plus 3.5.9 将 PaginationInnerInterceptor 移至独立的 jsqlparser 模块，
         // 本项目未引入该模块，故通过 selectCount + last(LIMIT/OFFSET) 手动实现分页，
         // 等效于开启分页插件后的行为。
-        long total = activityMapper.selectCount(wrapper);
+        long total = activityMapper.selectCount(queryWrapper);
 
         int offset = (page - 1) * size;
-        wrapper.last("LIMIT " + size + " OFFSET " + offset);
-        List<Activity> records = activityMapper.selectList(wrapper);
+        queryWrapper.last("LIMIT " + size + " OFFSET " + offset);
+        List<Activity> records = activityMapper.selectList(queryWrapper);
 
         Page<Activity> activityPage = new Page<>(page, size, total);
         activityPage.setRecords(records);
@@ -92,9 +97,7 @@ public class ActivityService {
         syncParticipantCountsWithRegistrations(activityPage.getRecords());
 
         return activityPage.convert(activity -> {
-            ActivityVO vo = new ActivityVO();
-            BeanUtils.copyProperties(activity, vo);
-            vo.setAvailableSlots(activity.getMaxParticipants() - activity.getCurrentParticipants());
+            ActivityVO vo = toActivityVO(activity);
 
             if (userId != null) {
                 LambdaQueryWrapper<Registration> regWrapper = new LambdaQueryWrapper<>();
@@ -115,9 +118,7 @@ public class ActivityService {
         }
         reconcileActivityRegistrationStats(activity, countRegisteredForActivity(activityId));
 
-        ActivityVO vo = new ActivityVO();
-        BeanUtils.copyProperties(activity, vo);
-        vo.setAvailableSlots(activity.getMaxParticipants() - activity.getCurrentParticipants());
+        ActivityVO vo = toActivityVO(activity);
         
         if (userId != null) {
             LambdaQueryWrapper<Registration> wrapper = new LambdaQueryWrapper<>();
@@ -164,11 +165,15 @@ public class ActivityService {
             throw new BusinessException("招募人数不能小于当前报名人数");
         }
         Long creatorId = existing.getCreatorId();
+        String oldImageKey = existing.getImageKey();
         BeanUtils.copyProperties(request, existing);
         existing.setId(activityId);
         existing.setCreatorId(creatorId);
         activityMapper.updateById(existing);
         reconcileActivityRegistrationStats(existing, countRegisteredForActivity(activityId));
+        if (StringUtils.hasText(oldImageKey) && !oldImageKey.equals(existing.getImageKey())) {
+            minioStorageService.deleteObjectQuietly(oldImageKey);
+        }
     }
 
     /**
@@ -292,11 +297,7 @@ public class ActivityService {
         List<Activity> list = activityMapper.selectList(w);
         List<ActivityVO> result = new ArrayList<>(list.size());
         for (Activity a : list) {
-            ActivityVO vo = new ActivityVO();
-            BeanUtils.copyProperties(a, vo);
-            int cur = a.getCurrentParticipants() != null ? a.getCurrentParticipants() : 0;
-            vo.setAvailableSlots(Math.max(0, a.getMaxParticipants() - cur));
-            result.add(vo);
+            result.add(toActivityVO(a));
         }
         return result;
     }
@@ -314,11 +315,7 @@ public class ActivityService {
         List<Activity> list = activityMapper.selectList(w);
         List<ActivityVO> result = new ArrayList<>(list.size());
         for (Activity a : list) {
-            ActivityVO vo = new ActivityVO();
-            BeanUtils.copyProperties(a, vo);
-            int cur = a.getCurrentParticipants() != null ? a.getCurrentParticipants() : 0;
-            vo.setAvailableSlots(Math.max(0, a.getMaxParticipants() - cur));
-            result.add(vo);
+            result.add(toActivityVO(a));
         }
         return result;
     }
@@ -405,6 +402,7 @@ public class ActivityService {
         registrationMapper.delete(regWrapper);
         activityMapper.deleteById(activityId);
         redisTemplate.delete(RedisKeyConstant.getActivityStockKey(activityId));
+        minioStorageService.deleteObjectQuietly(activity.getImageKey());
     }
 
     private int countRegisteredForActivity(Long activityId) {
@@ -446,5 +444,36 @@ public class ActivityService {
             int actual = countMap.getOrDefault(activity.getId(), 0);
             reconcileActivityRegistrationStats(activity, actual);
         }
+    }
+
+    private void applyActivityListOrdering(QueryWrapper<Activity> queryWrapper, String status) {
+        if (StringUtils.hasText(status)) {
+            queryWrapper.orderByAsc("registration_deadline", "start_time");
+            return;
+        }
+
+        String priorityOrder = """
+                CASE
+                    WHEN status NOT IN ('COMPLETED', 'CANCELLED')
+                         AND registration_start_time <= NOW()
+                         AND registration_deadline >= NOW() THEN 0
+                    WHEN status NOT IN ('COMPLETED', 'CANCELLED')
+                         AND registration_start_time > NOW() THEN 1
+                    WHEN status NOT IN ('COMPLETED', 'CANCELLED') THEN 2
+                    ELSE 3
+                END
+                """;
+
+        queryWrapper.orderByAsc(priorityOrder, "registration_deadline", "start_time");
+    }
+
+    private ActivityVO toActivityVO(Activity activity) {
+        ActivityVO vo = new ActivityVO();
+        BeanUtils.copyProperties(activity, vo);
+        int current = activity.getCurrentParticipants() != null ? activity.getCurrentParticipants() : 0;
+        int max = activity.getMaxParticipants() != null ? activity.getMaxParticipants() : 0;
+        vo.setAvailableSlots(Math.max(0, max - current));
+        vo.setImageUrl(minioStorageService.buildActivityImageUrl(activity.getImageKey()));
+        return vo;
     }
 }

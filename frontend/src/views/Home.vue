@@ -52,6 +52,12 @@
         <el-row :gutter="16">
           <el-col :xs="24" :sm="12" :lg="8" v-for="activity in activities" :key="activity.id">
             <div class="activity-item" @click="goToDetail(activity.id)">
+              <div class="activity-cover" :class="{ empty: !activity.imageUrl }">
+                <img v-if="activity.imageUrl" :src="activity.imageUrl" :alt="activity.title">
+                <div v-else class="cover-fallback">
+                  <span>{{ activity.category || '志愿活动' }}</span>
+                </div>
+              </div>
               <div class="item-tags">
                 <el-tag :type="getRecruitmentDisplay(activity).type" effect="light">{{ getRecruitmentDisplay(activity).text }}</el-tag>
                 <el-tag type="info" effect="plain">{{ activity.category }}</el-tag>
@@ -93,15 +99,30 @@ const goToDetail = (id) => {
   router.push(`/activity/${id}`)
 }
 
+const sortHomeActivities = (records = []) => {
+  return [...records]
+    .filter(activity => getRecruitmentDisplay(activity).text === '招募中')
+    .sort((a, b) => {
+      const maxDiff = (b.maxParticipants || 0) - (a.maxParticipants || 0)
+      if (maxDiff !== 0) return maxDiff
+
+      const currentDiff = (b.currentParticipants || 0) - (a.currentParticipants || 0)
+      if (currentDiff !== 0) return currentDiff
+
+      return new Date(a.registrationDeadline).getTime() - new Date(b.registrationDeadline).getTime()
+    })
+    .slice(0, 6)
+}
+
 const fetchData = async () => {
   try {
     const [actRes, regRes, userRes] = await Promise.all([
-      getActivityList({ page: 1, size: 6, recruitmentPhase: 'RECRUITING' }),
+      getActivityList({ page: 1, size: 20, recruitmentPhase: 'RECRUITING' }),
       getMyRegistrations(),
       getUserInfo()
     ])
 
-    activities.value = actRes.data.records || []
+    activities.value = sortHomeActivities(actRes.data.records || [])
     registrations.value = regRes.data || []
     userInfo.value = userRes.data || {}
   } catch (error) {
@@ -202,7 +223,7 @@ onMounted(() => {
 .activity-item {
   border-radius: 16px;
   background: #f3f2ff;
-  padding: 18px;
+  padding: 14px;
   margin-bottom: 14px;
   cursor: pointer;
   transition: all 0.25s ease;
@@ -217,14 +238,14 @@ onMounted(() => {
   display: flex;
   gap: 8px;
   flex-wrap: wrap;
-  margin-bottom: 10px;
+  margin: 0 4px 10px;
 }
 
 .activity-item h3 {
   font-size: 17px;
   line-height: 1.4;
   min-height: 48px;
-  margin-bottom: 12px;
+  margin: 0 4px 12px;
 }
 
 .meta-row {
@@ -233,7 +254,33 @@ onMounted(() => {
   gap: 6px;
   color: #5f647a;
   font-size: 14px;
-  margin-bottom: 6px;
+  margin: 0 4px 6px;
+}
+
+.activity-cover {
+  overflow: hidden;
+  height: 168px;
+  border-radius: 14px;
+  margin-bottom: 12px;
+  background: linear-gradient(145deg, #dde8ff, #f8efe1);
+}
+
+.activity-cover img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+.cover-fallback {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  align-items: flex-end;
+  padding: 16px;
+  color: #41506f;
+  font-weight: 700;
+  letter-spacing: 0.4px;
 }
 
 @media (max-width: 768px) {

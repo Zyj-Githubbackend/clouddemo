@@ -6,11 +6,20 @@ import org.example.dto.ActivityCreateRequest;
 import org.example.dto.AIGenerateRequest;
 import org.example.service.AIService;
 import org.example.service.ActivityService;
+import org.example.service.MinioStorageService;
 import org.example.vo.ActivityVO;
+import org.example.vo.ActivityImageUploadVO;
 import org.example.vo.RegistrationVO;
+import org.springframework.core.io.InputStreamResource;
+import org.springframework.http.CacheControl;
+import org.springframework.http.MediaType;
+import org.springframework.http.ResponseEntity;
+import org.springframework.util.StringUtils;
+import org.springframework.web.multipart.MultipartFile;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
+import java.util.concurrent.TimeUnit;
 
 @RestController
 @RequestMapping("/activity")
@@ -18,10 +27,14 @@ public class ActivityController {
     
     private final ActivityService activityService;
     private final AIService aiService;
+    private final MinioStorageService minioStorageService;
     
-    public ActivityController(ActivityService activityService, AIService aiService) {
+    public ActivityController(ActivityService activityService,
+                              AIService aiService,
+                              MinioStorageService minioStorageService) {
         this.activityService = activityService;
         this.aiService = aiService;
+        this.minioStorageService = minioStorageService;
     }
     
     @GetMapping("/list")
@@ -188,6 +201,36 @@ public class ActivityController {
         
         String description = aiService.generateActivityDescription(request);
         return Result.success(description);
+    }
+
+    @PostMapping(value = "/admin/image", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    public Result<ActivityImageUploadVO> uploadActivityImage(
+            @RequestPart("file") MultipartFile file,
+            @RequestHeader("X-User-Role") String role) {
+
+        if (!"ADMIN".equals(role)) {
+            return Result.forbidden("只有管理员才能上传活动图片");
+        }
+
+        String imageKey = minioStorageService.uploadActivityImage(file);
+        return Result.success(new ActivityImageUploadVO(
+                imageKey,
+                minioStorageService.buildActivityImageUrl(imageKey)
+        ));
+    }
+
+    @GetMapping("/image")
+    public ResponseEntity<InputStreamResource> getActivityImage(@RequestParam String objectKey) {
+        var stat = minioStorageService.statObject(objectKey);
+        String contentType = StringUtils.hasText(stat.contentType())
+                ? stat.contentType()
+                : MediaType.APPLICATION_OCTET_STREAM_VALUE;
+
+        return ResponseEntity.ok()
+                .contentType(MediaType.parseMediaType(contentType))
+                .contentLength(stat.size())
+                .cacheControl(CacheControl.maxAge(1, TimeUnit.HOURS).cachePublic())
+                .body(new InputStreamResource(minioStorageService.getObjectStream(objectKey)));
     }
 
     /**

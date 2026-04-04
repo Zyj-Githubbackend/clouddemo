@@ -12,6 +12,8 @@ public class ActivityCreateRequest implements Serializable {
     private String title;
     
     private String description;
+
+    private String imageKey;
     
     private String location;
     

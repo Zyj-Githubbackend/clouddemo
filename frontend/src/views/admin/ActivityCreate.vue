@@ -96,6 +96,16 @@
 
         <el-col :xs="24" :md="9">
           <el-card class="section" shadow="never">
+            <template #header><h3>活动图片</h3></template>
+            <ActivityImageUploader
+              :image-key="form.imageKey"
+              :image-url="imagePreviewUrl"
+              @update:image-key="(value) => { form.imageKey = value }"
+              @update:image-url="setImagePreviewUrl"
+            />
+          </el-card>
+
+          <el-card class="section" shadow="never">
             <template #header><h3>时间安排</h3></template>
 
             <div class="time-group">
@@ -168,18 +178,25 @@ import { ref, reactive } from 'vue'
 import { useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
 import { createActivity, generateDescription } from '@/api/activity'
+import ActivityImageUploader from '@/components/ActivityImageUploader.vue'
 
 const router = useRouter()
 const formRef = ref()
 const loading = ref(false)
 const aiLoading = ref(false)
 const aiKeywords = ref('')
+const imagePreviewUrl = ref('')
+
+const setImagePreviewUrl = (value) => {
+  imagePreviewUrl.value = value
+}
 
 const form = reactive({
   title: '',
   category: '',
   location: '',
   description: '',
+  imageKey: '',
   maxParticipants: 20,
   volunteerHours: 2,
   startTime: '',
@@ -281,6 +298,7 @@ const handleSubmit = async () => {
 const handleReset = () => {
   formRef.value.resetFields()
   aiKeywords.value = ''
+  imagePreviewUrl.value = ''
 }
 </script>
 
