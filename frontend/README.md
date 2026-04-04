@@ -1,420 +1,90 @@
-# 🎨 前端项目文档
+﻿# 前端说明
 
-> 基于 Vue 3 + Vite + Element Plus 的现代化志愿服务管理系统前端
+前端基于 Vue 3 + Vite，开发模式通过 Vite 运行，部署模式通过 Nginx 托管 `frontend/dist`。
 
-## ✨ 特性
+## 技术栈
 
-- 🎨 **现代化UI设计** - 渐变主题 + 流畅动画
-- 📱 **完全响应式** - 支持桌面/平板/手机
-- ⚡ **快速开发** - Vite 极速热更新
-- 🎯 **组件化** - Element Plus 丰富组件库
-- 🔐 **权限控制** - 路由守卫 + 角色鉴权
-- 💾 **状态管理** - Pinia 轻量状态管理
-- 🚀 **API封装** - Axios 统一请求拦截
+- Vue 3
+- Vue Router 4
+- Pinia
+- Axios
+- Element Plus
+- ECharts
+- dayjs
 
-## 🛠️ 技术栈
+## 目录概览
 
-| 技术 | 版本 | 说明 |
-|------|------|------|
-| Vue | 3.4 | 渐进式框架 + Composition API |
-| Vite | 5.4 | 下一代前端构建工具 |
-| Element Plus | ^2.4 | Vue 3 UI 组件库 |
-| Pinia | ^2.2 | Vue 状态管理 |
-| Vue Router | ^4.2 | 官方路由管理 |
-| Axios | ^1.6 | HTTP 客户端 |
-| ECharts | ^5.4 | 图表（首页等） |
-| dayjs | ^1.11 | 日期格式化 |
-
-## 📁 项目结构
-
-```
+```text
 frontend/
-├── src/
-│   ├── views/              # 页面组件
-│   │   ├── Login.vue       # 登录页（美化版，快速登录）
-│   │   ├── Register.vue    # 注册页
-│   │   ├── Home.vue        # 首页（数据统计）
-│   │   ├── ActivityList.vue    # 活动列表
-│   │   ├── ActivityDetail.vue  # 活动详情
-│   │   ├── MyCenter.vue    # 个人中心
-│   │   └── admin/          # 管理员页面
-│   │       ├── AdminLayout.vue
-│   │       ├── ActivityManage.vue   # 活动管理（结项/取消高亮行）
-│   │       ├── ActivityCreate.vue   # 发布活动（分组卡片表单）
-│   │       ├── ActivityCheckIn.vue  # 签到管理
-│   │       ├── VolunteerHours.vue   # 时长统计
-│   │       └── HoursConfirm.vue     # 时长核销（仅已结束未结项）
-│   ├── components/         # 公共组件
-│   │   └── Layout.vue      # 主布局（响应式导航）
-│   ├── api/               # API接口
-│   │   ├── user.js        # 用户相关API
-│   │   └── activity.js    # 活动相关API
-│   ├── router/            # 路由配置
-│   │   └── index.js       # 路由定义 + 守卫
-│   ├── store/             # 状态管理
-│   │   └── user.js        # 用户状态
-│   ├── utils/             # 工具函数
-│   │   ├── request.js     # Axios封装
-│   │   ├── activityPhase.js  # 活动阶段标签（含 COMPLETED 独立处理）
-│   │   └── recruitment.js    # 招募状态工具
-│   ├── style.css          # 全局样式
-│   ├── App.vue            # 根组件
-│   └── main.js            # 入口文件
-├── public/                # 静态资源
-├── index.html             # HTML模板
-├── vite.config.js         # Vite配置
-├── package.json           # 依赖配置
-└── README.md              # 本文档
+├─ src/
+│  ├─ api/
+│  ├─ components/
+│  ├─ router/
+│  ├─ store/
+│  ├─ utils/
+│  └─ views/
+├─ index.html
+├─ package.json
+└─ vite.config.js
 ```
 
-## 🚀 快速开始
-
-### 安装依赖
+## 开发模式
 
 ```bash
+cd frontend
 npm install
-```
-
-### 启动开发服务器
-
-```bash
 npm run dev
 ```
 
-访问：http://localhost:3000
+访问：`http://localhost:3000`
 
-### 构建生产版本
+开发模式下，Vite 会把 `/api` 代理到 `http://localhost:9000`。
+
+## 生产构建
 
 ```bash
+cd frontend
 npm run build
 ```
 
-### 预览生产构建
+构建结果输出到 `frontend/dist`。
 
-```bash
-npm run preview
-```
+## 与 Nginx 的关系
 
-## 🎨 界面展示
+当前仓库本机部署的访问方式是：
 
-### 登录页面特性
+- `/`：前端页面
+- `/api/`：转发到网关
+- `/monitor/`：转发到监控后台
 
-- ✨ 渐变紫色背景
-- 🌊 动态浮动元素动画
-- 🔐 现代化输入框（带图标）
-- ⚡ **快速登录标签**（点击即填充账号密码）
-  - 🔴 管理员
-  - 🟢 学生01
-  - 🟡 学生02
-- 📱 响应式布局（自适应手机屏幕）
+相关配置见 [../deploy/nginx/cloud-demo.local.conf](../deploy/nginx/cloud-demo.local.conf)。
 
-### 首页特性
+## 主要页面
 
-- 📊 **数据统计卡片**（4个指标）
-  - 累计志愿时长
-  - 参与活动数
-  - 已签到次数（修正自"已完成"，使用 `checkInStatus`）
-  - 已核销次数
-- 🎴 **最新活动卡片网格**（仅展示招募窗口内的活动，按截止时间升序）
-  - 悬浮效果
-  - 渐变图标
-  - 活动状态标签
-- 📱 **响应式网格**
-  - 桌面：4列
-  - 平板：2列
-  - 手机：1列
+- `Login.vue`
+- `Register.vue`
+- `Home.vue`
+- `ActivityList.vue`
+- `ActivityDetail.vue`
+- `MyCenter.vue`
+- `views/admin/*`
 
-### 导航组件特性
+## 关键文件
 
-- 🖥️ **桌面端**：水平导航栏 + 用户下拉菜单
-- 📱 **移动端**：抽屉式侧边栏 + 汉堡菜单
-- 🎯 **自动切换**：根据屏幕宽度自动切换布局
-- ✨ **流畅动画**：路由切换淡入淡出
+- `src/utils/request.js`：统一请求实例，`baseURL` 为 `/api`
+- `src/router/index.js`：路由和鉴权守卫
+- `src/api/user.js`：用户接口
+- `src/api/activity.js`：活动接口
 
-## 🎯 响应式设计
+## 常见问题
 
-### 断点定义
+### 页面能打开但接口报错
 
-```css
-/* 手机 */
-@media (max-width: 480px) { ... }
+优先检查：
 
-/* 平板 */
-@media (max-width: 768px) { ... }
+- `gateway-service` 是否运行在 `9000`
+- Vite 代理或 Nginx `/api/` 代理是否生效
 
-/* 桌面 */
-@media (max-width: 1024px) { ... }
+### 刷新页面 404
 
-/* 大屏 */
-@media (min-width: 1200px) { ... }
-```
-
-### Element Plus 响应式网格
-
-使用 `el-col` 的响应式属性：
-
-```vue
-<el-col :xs="24" :sm="12" :md="8" :lg="6">
-  <!-- 内容 -->
-</el-col>
-```
-
-- `xs`: < 768px（手机）
-- `sm`: ≥ 768px（平板）
-- `md`: ≥ 992px（桌面）
-- `lg`: ≥ 1200px（大屏）
-
-## 🔧 配置说明
-
-### Vite 配置 (vite.config.js)
-
-```javascript
-export default defineConfig({
-  plugins: [vue()],
-  resolve: {
-    alias: {
-      '@': resolve(__dirname, 'src')  // @ 别名指向 src
-    }
-  },
-  server: {
-    port: 3000,
-    proxy: {
-      '/api': {
-        target: 'http://localhost:9000',  // 后端网关
-        changeOrigin: true,
-        rewrite: (path) => path.replace(/^\/api/, '')
-      }
-    }
-  }
-})
-```
-
-### 路由配置 (router/index.js)
-
-- **路由守卫**：检查登录状态
-- **角色权限**：管理员路由验证
-- **重定向**：未登录跳转登录页
-
-### API 请求封装 (utils/request.js)
-
-- **请求拦截器**：自动添加 JWT Token
-- **响应拦截器**：统一错误处理
-- **401处理**：自动退出登录
-- **消息提示**：使用 Element Plus Message
-
-## 📊 状态管理
-
-### User Store (store/user.js)
-
-```javascript
-// 状态
-token         // JWT令牌
-userInfo      // 用户信息
-
-// 计算属性
-isLogin       // 是否登录
-isAdmin       // 是否管理员
-
-// 方法
-setToken()    // 设置令牌
-setUserInfo() // 设置用户信息
-logout()      // 退出登录
-```
-
-## 🎨 样式规范
-
-### 全局样式 (style.css)
-
-- **CSS Reset**：统一浏览器样式
-- **滚动条美化**：自定义滚动条样式
-- **主题色定制**：紫色渐变主题
-- **Element Plus 定制**：按钮、卡片、输入框
-- **工具类**：文本截断、动画效果
-
-### 主题色
-
-```css
-:root {
-  --el-color-primary: #667eea;
-  --primary-gradient: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-}
-```
-
-### 常用渐变
-
-```css
-/* 紫色渐变 */
-background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-
-/* 图标背景 */
-background: rgba(102, 126, 234, 0.2);
-```
-
-## 🔐 权限控制
-
-### 路由守卫
-
-```javascript
-router.beforeEach((to, from, next) => {
-  const userStore = useUserStore()
-  
-  if (to.meta.requiresAuth && !userStore.isLogin) {
-    // 需要登录但未登录 → 跳转登录页
-    next('/login')
-  } else if (to.meta.requiresAdmin && !userStore.isAdmin) {
-    // 需要管理员权限但不是管理员 → 拒绝访问
-    ElMessage.error('需要管理员权限')
-    next('/home')
-  } else {
-    next()
-  }
-})
-```
-
-### 角色权限
-
-```vue
-<!-- 仅管理员可见 -->
-<el-menu-item v-if="userStore.isAdmin" index="/admin">
-  管理后台
-</el-menu-item>
-```
-
-## 📱 移动端适配
-
-### 导航组件
-
-- 屏幕 < 768px：显示汉堡菜单按钮
-- 点击按钮：打开抽屉式侧边栏
-- 抽屉内容：用户信息 + 导航菜单
-
-### 卡片网格
-
-- 桌面：`el-col :lg="6"`（4列）
-- 平板：`el-col :md="12"`（2列）
-- 手机：`el-col :xs="24"`（1列）
-
-### 表单优化
-
-- 移动端：增大输入框和按钮
-- 标签位置：`label-position="top"`
-- 字体大小：适当放大
-
-## 🐛 常见问题
-
-### 1. 端口被占用
-
-```bash
-# Windows
-netstat -ano | findstr :3000
-taskkill /PID <PID> /F
-
-# Linux/Mac
-lsof -i :3000
-kill -9 <PID>
-```
-
-### 2. 依赖安装失败
-
-```bash
-# 清除缓存
-npm cache clean --force
-
-# 删除重装
-rm -rf node_modules package-lock.json
-npm install
-```
-
-### 3. Vite 启动报错
-
-```bash
-# 检查 Node 版本
-node -v  # 应该 ≥ 16
-
-# 更新 Vite
-npm install vite@latest
-```
-
-### 4. 跨域问题
-
-检查 `vite.config.js` 中的 proxy 配置：
-```javascript
-proxy: {
-  '/api': {
-    target: 'http://localhost:9000',
-    changeOrigin: true,
-    rewrite: (path) => path.replace(/^\/api/, '')
-  }
-}
-```
-
-### 5. 图标不显示
-
-确保已注册 Element Plus 图标：
-```javascript
-import * as ElementPlusIconsVue from '@element-plus/icons-vue'
-
-for (const [key, component] of Object.entries(ElementPlusIconsVue)) {
-  app.component(key, component)
-}
-```
-
-## 📚 相关资源
-
-- [Vue 3 文档](https://cn.vuejs.org/)
-- [Vite 文档](https://cn.vitejs.dev/)
-- [Element Plus 文档](https://element-plus.org/zh-CN/)
-- [Pinia 文档](https://pinia.vuejs.org/zh/)
-- [Vue Router 文档](https://router.vuejs.org/zh/)
-
-## 🎯 开发规范
-
-### 组件命名
-
-- 页面组件：大驼峰（`ActivityList.vue`）
-- 公共组件：大驼峰（`Layout.vue`）
-- 单文件组件：必须有多个单词
-
-### 代码风格
-
-- 使用 Composition API
-- 优先使用 `<script setup>`
-- Props 定义使用 `defineProps`
-- Emits 定义使用 `defineEmits`
-
-### Git 提交
-
-```bash
-# 格式
-<type>(<scope>): <subject>
-
-# 示例
-feat(login): 添加快速登录功能
-fix(activity): 修复报名按钮状态
-style(home): 优化首页卡片样式
-```
-
-## 🔨 脚本命令
-
-```bash
-# 开发
-npm run dev          # 启动开发服务器
-npm run build        # 构建生产版本
-npm run preview      # 预览生产构建
-
-# 代码检查（如果配置了）
-npm run lint         # ESLint 检查
-npm run lint:fix     # 自动修复
-```
-
-## 📝 TODO
-
-- [ ] 添加单元测试
-- [ ] 添加 E2E 测试
-- [ ] 优化打包体积
-- [ ] 添加 PWA 支持
-- [ ] 添加国际化（i18n）
-
----
-
-💡 **提示**：开发时建议使用 Vue DevTools 浏览器扩展进行调试。
+部署模式下必须通过 Nginx 的 `try_files ... /index.html` 支持 Vue Router history 模式。
