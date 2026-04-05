@@ -11,6 +11,8 @@ import io.minio.StatObjectResponse;
 import io.minio.errors.ErrorResponseException;
 import org.example.common.exception.BusinessException;
 import org.example.config.MinioProperties;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.http.MediaType;
 import org.springframework.stereotype.Service;
 import org.springframework.util.StringUtils;
@@ -25,6 +27,7 @@ import java.util.UUID;
 @Service
 public class MinioStorageService {
 
+    private static final Logger log = LoggerFactory.getLogger(MinioStorageService.class);
     private static final String IMAGE_WEBP = "image/webp";
 
     private static final Set<String> ALLOWED_IMAGE_TYPES = Set.of(
@@ -43,17 +46,17 @@ public class MinioStorageService {
     public String uploadActivityImage(MultipartFile file) {
         ensureConfigured();
         if (file == null || file.isEmpty()) {
-            throw new BusinessException("请先选择图片文件");
+            throw new BusinessException("Please select an image file");
         }
 
         String contentType = file.getContentType();
         if (!StringUtils.hasText(contentType) || !ALLOWED_IMAGE_TYPES.contains(contentType)) {
-            throw new BusinessException("仅支持 JPG、PNG、GIF、WEBP 格式图片");
+            throw new BusinessException("Only JPG, PNG, GIF and WEBP images are supported");
         }
 
         long maxBytes = properties.getMaxFileSizeMb() * 1024 * 1024;
         if (file.getSize() > maxBytes) {
-            throw new BusinessException("图片大小不能超过 " + properties.getMaxFileSizeMb() + " MB");
+            throw new BusinessException("Image size cannot exceed " + properties.getMaxFileSizeMb() + " MB");
         }
 
         String objectKey = buildObjectKey(file.getOriginalFilename(), contentType);
@@ -69,16 +72,18 @@ public class MinioStorageService {
                             .contentType(contentType)
                             .build()
             );
+            log.info("uploaded activity image objectKey={} size={} contentType={}",
+                    objectKey, file.getSize(), contentType);
             return objectKey;
         } catch (Exception ex) {
-            throw new BusinessException("上传活动图片失败: " + ex.getMessage());
+            throw new BusinessException("Failed to upload activity image: " + ex.getMessage());
         }
     }
 
     public InputStream getObjectStream(String objectKey) {
         ensureConfigured();
         if (!StringUtils.hasText(objectKey)) {
-            throw new BusinessException("图片对象键不能为空");
+            throw new BusinessException("Image object key cannot be empty");
         }
 
         try {
@@ -90,18 +95,18 @@ public class MinioStorageService {
             );
         } catch (ErrorResponseException ex) {
             if ("NoSuchKey".equals(ex.errorResponse().code())) {
-                throw new BusinessException("图片不存在");
+                throw new BusinessException("Image does not exist");
             }
-            throw new BusinessException("读取活动图片失败: " + ex.getMessage());
+            throw new BusinessException("Failed to read activity image: " + ex.getMessage());
         } catch (Exception ex) {
-            throw new BusinessException("读取活动图片失败: " + ex.getMessage());
+            throw new BusinessException("Failed to read activity image: " + ex.getMessage());
         }
     }
 
     public StatObjectResponse statObject(String objectKey) {
         ensureConfigured();
         if (!StringUtils.hasText(objectKey)) {
-            throw new BusinessException("图片对象键不能为空");
+            throw new BusinessException("Image object key cannot be empty");
         }
 
         try {
@@ -113,11 +118,11 @@ public class MinioStorageService {
             );
         } catch (ErrorResponseException ex) {
             if ("NoSuchKey".equals(ex.errorResponse().code())) {
-                throw new BusinessException("图片不存在");
+                throw new BusinessException("Image does not exist");
             }
-            throw new BusinessException("读取图片信息失败: " + ex.getMessage());
+            throw new BusinessException("Failed to read image metadata: " + ex.getMessage());
         } catch (Exception ex) {
-            throw new BusinessException("读取图片信息失败: " + ex.getMessage());
+            throw new BusinessException("Failed to read image metadata: " + ex.getMessage());
         }
     }
 
@@ -140,14 +145,15 @@ public class MinioStorageService {
                             .object(objectKey)
                             .build()
             );
-        } catch (Exception ignored) {
-            // Ignore cleanup failures to avoid blocking business operations.
+            log.info("deleted minio object objectKey={}", objectKey);
+        } catch (Exception ex) {
+            log.warn("failed to delete minio object objectKey={} message={}", objectKey, ex.getMessage());
         }
     }
 
     private void ensureConfigured() {
         if (!properties.isConfigured()) {
-            throw new BusinessException("MinIO 未配置完整，请检查 MINIO_ENDPOINT、MINIO_ACCESS_KEY、MINIO_SECRET_KEY、MINIO_BUCKET");
+            throw new BusinessException("MinIO is not fully configured");
         }
     }
 

@@ -57,6 +57,9 @@ services:
       - mysql
       - nacos
     environment:
+      APP_LOG_FILE: /app/logs/debug.log
+      TZ: Asia/Shanghai
+      JAVA_TOOL_OPTIONS: -Duser.timezone=Asia/Shanghai
       SPRING_CLOUD_NACOS_SERVER_ADDR: nacos:8848
       SPRING_CLOUD_NACOS_DISCOVERY_SERVER_ADDR: nacos:8848
       SPRING_DATASOURCE_URL: jdbc:mysql://mysql:3306/volunteer_platform?useUnicode=true&characterEncoding=utf-8&useSSL=false&serverTimezone=Asia/Shanghai&allowPublicKeyRetrieval=true
@@ -64,6 +67,8 @@ services:
       SPRING_DATASOURCE_PASSWORD: 123888
       JWT_SECRET: volunteerPlatformSecretKey2024
       JWT_EXPIRATION: 86400000
+    volumes:
+      - ./user-service/logs:/app/logs
     networks:
       - cloud-demo
 
@@ -79,6 +84,9 @@ services:
       - nacos
       - minio
     environment:
+      APP_LOG_FILE: /app/logs/debug.log
+      TZ: Asia/Shanghai
+      JAVA_TOOL_OPTIONS: -Duser.timezone=Asia/Shanghai
       SPRING_CLOUD_NACOS_SERVER_ADDR: nacos:8848
       SPRING_CLOUD_NACOS_DISCOVERY_SERVER_ADDR: nacos:8848
       SPRING_DATASOURCE_URL: jdbc:mysql://mysql:3306/volunteer_platform?useUnicode=true&characterEncoding=utf-8&useSSL=false&serverTimezone=Asia/Shanghai&allowPublicKeyRetrieval=true
@@ -92,6 +100,8 @@ services:
       MINIO_SECRET_KEY: ${MINIO_SECRET_KEY:-12345678}
       MINIO_BUCKET: ${MINIO_BUCKET:-activity-images}
       MINIO_PUBLIC_BASE_URL: ${MINIO_PUBLIC_BASE_URL:-/api}
+    volumes:
+      - ./activity-service/logs:/app/logs
     networks:
       - cloud-demo
 
@@ -106,10 +116,15 @@ services:
       - user-service
       - activity-service
     environment:
+      APP_LOG_FILE: /app/logs/debug.log
+      TZ: Asia/Shanghai
+      JAVA_TOOL_OPTIONS: -Duser.timezone=Asia/Shanghai
       SPRING_CLOUD_NACOS_SERVER_ADDR: nacos:8848
       SPRING_CLOUD_NACOS_DISCOVERY_SERVER_ADDR: nacos:8848
       JWT_SECRET: volunteerPlatformSecretKey2024
       JWT_EXPIRATION: 86400000
+    volumes:
+      - ./gateway-service/logs:/app/logs
     ports:
       - "9001:9000"
     networks:
@@ -124,8 +139,13 @@ services:
     depends_on:
       - nacos
     environment:
+      APP_LOG_FILE: /app/logs/debug.log
+      TZ: Asia/Shanghai
+      JAVA_TOOL_OPTIONS: -Duser.timezone=Asia/Shanghai
       SPRING_CLOUD_NACOS_SERVER_ADDR: nacos:8848
       SPRING_CLOUD_NACOS_DISCOVERY_SERVER_ADDR: nacos:8848
+    volumes:
+      - ./monitor-service/logs:/app/logs
     ports:
       - "9101:9100"
     networks:

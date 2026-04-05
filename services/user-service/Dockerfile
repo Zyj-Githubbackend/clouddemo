@@ -20,6 +20,11 @@ RUN mvn -B -pl services/user-service -am clean package -DskipTests
 FROM public.ecr.aws/docker/library/eclipse-temurin:17-jre
 
 WORKDIR /app
+ENV APP_LOG_FILE=/app/logs/debug.log
+ENV TZ=Asia/Shanghai
+ENV JAVA_TOOL_OPTIONS=-Duser.timezone=Asia/Shanghai
+
+RUN mkdir -p /app/logs
 
 COPY --from=build /workspace/services/user-service/target/user-service-0.0.1-SNAPSHOT.jar app.jar
 
