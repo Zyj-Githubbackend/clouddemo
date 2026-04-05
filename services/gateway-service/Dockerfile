@@ -6,6 +6,9 @@ COPY pom.xml ./
 COPY services/pom.xml services/pom.xml
 COPY services/common/pom.xml services/common/pom.xml
 COPY services/gateway-service/pom.xml services/gateway-service/pom.xml
+COPY services/user-service/pom.xml services/user-service/pom.xml
+COPY services/activity-service/pom.xml services/activity-service/pom.xml
+COPY services/monitor-service/pom.xml services/monitor-service/pom.xml
 
 RUN mvn -B -pl services/gateway-service -am dependency:go-offline
 

@@ -186,13 +186,23 @@ docker compose up --build -d
 - 网关直连：`http://localhost:9001`
 - 监控直连：`http://localhost:9101`
 - Nacos：`http://localhost:8849/nacos`
+- MinIO API：`http://localhost:9007`
+- MinIO 控制台：`http://localhost:9008`
+
+同校园网访问：
+
+- 前台：`http://你的校园网IPv4:8080/`
+- 监控后台：`http://你的校园网IPv4:8080/monitor/`
 
 说明：
 
-- 当前 `docker-compose.yml` 默认连接宿主机上的 MinIO：`http://host.docker.internal:9005`
+- 当前 `docker-compose.yml` 已内置 MinIO 服务，`activity-service` 默认连接 `http://minio:9000`
 - 默认 MinIO 凭证为 `root / 12345678`
 - 如果你要改这些值，可以先参考仓库根目录的 `.env.example` 创建自己的 `.env`
 - 现在每个微服务都提供了独立 Dockerfile，除了整套 Compose，也支持单独构建某一个服务镜像
+- 分享给同学校友前，先用 `ipconfig` 查出你电脑当前校园网 IPv4 地址
+- Windows 防火墙至少需要放行 `8080` 端口
+- 如果你本机能访问 `http://localhost:8080/`，别人却打不开 `http://你的校园网IPv4:8080/`，一般是防火墙或校园网隔离问题
 
 如果命令提示无法连接 Docker Engine，请先启动 Docker Desktop。
 
