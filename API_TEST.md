@@ -87,23 +87,42 @@ curl http://localhost:9000/activity/myRegistrations \
   -H "Authorization: Bearer <token>"
 ```
 
-## 8. 管理员创建活动
+## 8. 导出我的已核销志愿记录
+
+```bash
+curl -L http://localhost:9000/activity/myRegistrations/exportConfirmed \
+  -H "Authorization: Bearer <token>" \
+  --output confirmed-hours.xlsx
+```
+
+返回结果为 Excel 文件，包含：
+
+- 已核销活动数
+- 已核销总时长
+- 已核销活动明细列表
+
+## 9. 管理员创建活动
 
 ```bash
 curl -X POST http://localhost:9000/activity/create \
   -H "Content-Type: application/json" \
   -H "Authorization: Bearer <admin-token>" \
-  -d "{\"title\":\"测试活动\",\"location\":\"图书馆\",\"category\":\"校园服务\"}"
+  -d "{\"title\":\"测试活动\",\"location\":\"图书馆\",\"category\":\"校园服务\",\"imageKeys\":[\"activity-images/test-1.jpg\",\"activity-images/test-2.jpg\"]}"
 ```
 
-## 9. 管理员查看志愿时长
+创建和编辑活动时都支持通过 `imageKeys` 传多张图片，活动详情接口会返回：
+
+- `imageKey` / `imageUrl`：首图，兼容旧页面
+- `imageKeys` / `imageUrls`：完整图片列表
+
+## 10. 管理员查看志愿时长
 
 ```bash
 curl "http://localhost:9000/user/admin/hours" \
   -H "Authorization: Bearer <admin-token>"
 ```
 
-## 10. 管理员核销时长
+## 11. 管理员核销时长
 
 ```bash
 curl -X POST http://localhost:9000/activity/confirmHours/1 \

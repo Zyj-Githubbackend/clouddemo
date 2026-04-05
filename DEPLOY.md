@@ -1,6 +1,6 @@
 ﻿# 部署说明
 
-本文档聚焦当前仓库已经验证过的两种部署方式：本机 Windows + Nginx，以及 Docker Compose。冗长的 CI/CD 和大段示例已移除，避免与实际仓库状态脱节。
+本文档聚焦当前仓库已经验证过的三种部署方式：本机 Windows + Nginx、Docker Compose，以及本机 Jenkins 调用 Docker Compose 自动发布。冗长的 CI/CD 和大段示例已移除，避免与实际仓库状态脱节。
 
 ## 目标拓扑
 
@@ -58,11 +58,23 @@ $env:MINIO_BUCKET="activity-images"
 
 如果你不设置环境变量，`activity-service` 会默认使用上面这组值。
 
-如果数据库不是刚用 `database/init.sql` 初始化，而是已有存量库，请先执行：
+如果数据库不是刚用 `database/init.sql` 初始化，而是已有存量库，请按实际情况执行以下其一：
 
 ```sql
 ALTER TABLE vol_activity ADD COLUMN image_key TEXT COMMENT '活动图片对象键列表，逗号分隔';
 ```
+
+或者：
+
+```sql
+ALTER TABLE vol_activity
+MODIFY COLUMN image_key TEXT COMMENT '活动图片对象键列表，逗号分隔';
+```
+
+其中：
+
+- `ADD COLUMN` 适用于老库没有该字段
+- `MODIFY COLUMN` 适用于字段已存在，但长度仍是旧版单图场景的 `VARCHAR(255)`
 
 启动：
 
@@ -216,7 +228,39 @@ docker compose up --build -d
 - 重新启动后会按当前的 `database/init.sql` 重新初始化数据库
 - 如果卷不删除，旧乱码数据会继续保留
 
-## 三、监控后台说明
+## 三、本机 Jenkins 自动发布
+
+如果 Jenkins 就安装在当前这台 Windows 机器上，最简单的方式是让 Jenkins 在现有构建步骤之后，再执行一次 Docker Compose。
+
+Jenkins 自由风格项目推荐使用：
+
+- `Build` -> `Execute Windows batch command`
+
+命令示例：
+
+```bat
+cd /d D:\clouddemo\cloud-demo
+docker compose up -d --build
+docker compose ps
+```
+
+如果你希望每次发布前先完整停掉旧容器，可以使用：
+
+```bat
+cd /d D:\clouddemo\cloud-demo
+docker compose down
+docker compose up -d --build
+docker compose ps
+```
+
+说明：
+
+- 这种方式适合 Jenkins 与 Docker Desktop 都在本机的场景
+- `up -d --build` 会保留已有数据卷，不会自动修改数据库表结构
+- 日常发布一般不建议直接使用 `docker compose down -v`，除非你明确要清空 MySQL 和 MinIO 数据
+- 如果 Jenkins 控制台里 Docker 已执行成功，但后续还有“自动创建 PR”之类的步骤报错，任务仍可能被 Jenkins 标红，此时需要单独调整 Jenkins 后续步骤
+
+## 四、监控后台说明
 
 `monitor-service` 当前已适配反向代理：
 
@@ -229,7 +273,7 @@ docker compose up --build -d
 
 而不是直接暴露 `http://localhost:9100/` 作为最终入口。
 
-## 四、Linux 服务器部署摘要
+## 五、Linux 服务器部署摘要
 
 如果后续迁移到 Linux，可以沿用同一思路：
 
@@ -239,7 +283,7 @@ docker compose up --build -d
 4. 将 `/monitor/` 代理到 `9100`
 5. 后端服务通过 `systemd` 或其他进程管理工具启动
 
-## 五、排查命令
+## 六、排查命令
 
 端口监听：
 
@@ -265,7 +309,7 @@ curl http://127.0.0.1:8081/
 netstat -ano | findstr :8081
 ```
 
-## 六、部署验收清单
+## 七、部署验收清单
 
 - [ ] `database/init.sql` 已执行
 - [ ] Redis 已启动

@@ -27,12 +27,13 @@
 - [ ] `docker-compose.yml` 已存在并可被 `docker compose config` 正确解析
 - [ ] Docker Engine 已启动
 - [ ] `docker compose up --build -d` 可执行
-- [ ] `http://localhost:8080/` 可访问
-- [ ] `http://localhost:8080/monitor/` 可访问
+- [ ] `http://localhost:8081/` 可访问
+- [ ] `http://localhost:8081/monitor/` 可访问
 - [ ] `http://localhost:9001/actuator/health` 返回 `UP`
 - [ ] `http://localhost:9101/actuator/health` 返回 `UP`
 - [ ] `http://localhost:8849/nacos/` 可访问
 - [ ] Docker 页面和接口返回的中文未出现乱码
+- [ ] 如果使用 Jenkins，本机构建任务可成功执行 `docker compose up -d --build`
 
 ## 页面访问
 
@@ -48,8 +49,11 @@
 - [ ] 活动详情可打开
 - [ ] 报名接口可用
 - [ ] 管理员可创建活动
+- [ ] 管理员创建或编辑活动时可上传多张图片
+- [ ] 活动详情页可展示多张图片
 - [ ] 管理员可签到
 - [ ] 管理员可核销时长
+- [ ] 用户可在“我的志愿足迹”导出已核销志愿时长和活动明细
 
 ## 局域网访问
 

@@ -8,6 +8,8 @@
 - 前端可开发模式运行，也可构建后交给 Nginx 托管
 - `monitor-service` 可通过 `/monitor/` 访问
 - 已提供本机 Nginx 配置片段
+- Docker Compose 已可直接在本机发布整套服务
+- 本机 Jenkins 已可在构建后调用 Docker Compose 完成自动发布
 
 ## 已交付模块
 
@@ -29,10 +31,17 @@
 - 前台：`http://localhost/`
 - 监控后台：`http://localhost/monitor/`
 - 开发模式前端：`http://localhost:3000`
-- Docker 模式前端：`http://localhost:8080/`
+- Docker 模式前端：`http://localhost:8081/`
 - Docker 网关直连：`http://localhost:9001`
 - Docker 监控直连：`http://localhost:9101`
 - Docker Nacos：`http://localhost:8849/nacos`
+
+## 最近补充的业务能力
+
+- 活动支持多图上传、编辑和详情轮播展示
+- 用户可在“我的志愿足迹”页面导出本人已核销志愿时长及活动列表 Excel
+- Docker 前端映射已调整为 `8081:80`
+- 本机 Jenkins 可通过 `Execute Windows batch command` 直接触发 `docker compose up -d --build`
 
 ## 关键配置对齐
 

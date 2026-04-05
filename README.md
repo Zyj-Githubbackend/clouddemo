@@ -13,6 +13,13 @@
 - 数据库：MySQL，库名 `volunteer_platform`
 - 缓存：Redis
 
+## 近期更新
+
+- 活动支持上传多张图片，后台创建和编辑活动时可维护图片列表，详情页可轮播展示
+- 用户可在“我的志愿足迹”页面导出本人已核销志愿时长及对应活动明细 Excel
+- Docker 版前端默认访问地址已调整为 `http://localhost:8081/`
+- 本机 Jenkins 任务可在构建完成后直接调用 `docker compose up -d --build` 完成 Docker 发布
+
 当前仓库已经补充了本机 Nginx 配置，推荐在本机通过 Nginx 统一访问：
 
 - 前台：`http://localhost/`
@@ -68,10 +75,19 @@ $env:MINIO_BUCKET="activity-images"
 
 如果你不设置环境变量，`activity-service` 会默认使用上面这组值。
 
-如果数据库已经初始化过，还需要先补字段：
+如果数据库已经初始化过，请按实际情况执行以下其一：
+
+1. 旧库还没有 `image_key` 字段：
 
 ```sql
 ALTER TABLE vol_activity ADD COLUMN image_key TEXT COMMENT '活动图片对象键列表，逗号分隔';
+```
+
+2. 字段已存在，但还是旧的 `VARCHAR(255)`：
+
+```sql
+ALTER TABLE vol_activity
+MODIFY COLUMN image_key TEXT COMMENT '活动图片对象键列表，逗号分隔';
 ```
 
 5. 前端二选一
@@ -127,6 +143,21 @@ docker compose up --build -d
 - 同校园网访问前，先用 `ipconfig` 确认当前校园网 IPv4 地址
 - 还需要放行 Windows 防火墙的 `8081` 端口；如果要让别人直连接口，再放行 `9001`
 - 如果本机能打开 `http://localhost:8081/`，但同学打不开 `http://你的校园网IPv4:8081/`，通常是防火墙或校园网终端隔离导致
+
+如果你在本机使用 Jenkins 触发 Docker 发布，构建成功后可直接执行：
+
+```bat
+cd /d D:\clouddemo\cloud-demo
+docker compose up -d --build
+```
+
+如果你希望每次发版前先完整停掉旧容器，也可以改为：
+
+```bat
+cd /d D:\clouddemo\cloud-demo
+docker compose down
+docker compose up -d --build
+```
 
 如果你想单独构建某个微服务镜像，也可以直接使用它自己的 Dockerfile，例如：
 

@@ -56,11 +56,23 @@ $env:MINIO_ROOT_PASSWORD="12345678"
 .\minio.exe server D:\miniodata\data2 --console-address "127.0.0.1:9006" --address "127.0.0.1:9005"
 ```
 
-如果 `vol_activity` 不是刚通过 `database/init.sql` 初始化，而是旧库升级，还需要先执行：
+如果 `vol_activity` 不是刚通过 `database/init.sql` 初始化，而是旧库升级，请按实际情况执行以下其一：
 
 ```sql
 ALTER TABLE vol_activity ADD COLUMN image_key TEXT COMMENT '活动图片对象键列表，逗号分隔';
 ```
+
+或者：
+
+```sql
+ALTER TABLE vol_activity
+MODIFY COLUMN image_key TEXT COMMENT '活动图片对象键列表，逗号分隔';
+```
+
+其中：
+
+- `ADD COLUMN` 适用于历史数据库还没有 `image_key` 字段
+- `MODIFY COLUMN` 适用于字段已经存在，但长度仍是旧的 `VARCHAR(255)`
 
 ## 步骤 4：编译后端
 
@@ -200,9 +212,18 @@ docker compose up --build -d
 - 默认 MinIO 凭证为 `root / 12345678`
 - 如果你要改这些值，可以先参考仓库根目录的 `.env.example` 创建自己的 `.env`
 - 现在每个微服务都提供了独立 Dockerfile，除了整套 Compose，也支持单独构建某一个服务镜像
+- 当前版本已支持活动多图上传，以及用户在“我的志愿足迹”页面导出本人已核销时长 Excel
 - 分享给同学校友前，先用 `ipconfig` 查出你电脑当前校园网 IPv4 地址
 - Windows 防火墙至少需要放行 `8081` 端口
 - 如果你本机能访问 `http://localhost:8081/`，别人却打不开 `http://你的校园网IPv4:8081/`，一般是防火墙或校园网隔离问题
+
+如果你本机已经装了 Jenkins，也可以把下面这段放到 `Execute Windows batch command` 中，让 Jenkins 在构建成功后自动发布：
+
+```bat
+cd /d D:\clouddemo\cloud-demo
+docker compose up -d --build
+docker compose ps
+```
 
 如果命令提示无法连接 Docker Engine，请先启动 Docker Desktop。
 

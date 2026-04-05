@@ -65,7 +65,7 @@ cloud-demo/
 - `common/`：公共工具和统一返回结构
 - `gateway-service/`：统一入口、JWT 鉴权、转发，内含独立 Dockerfile
 - `user-service/`：用户相关业务，内含独立 Dockerfile
-- `activity-service/`：活动和报名相关业务，内含独立 Dockerfile
+- `activity-service/`：活动、报名、多图上传、Excel 导出相关业务，内含独立 Dockerfile
 - `monitor-service/`：监控中心，内含独立 Dockerfile
 
 ### `frontend/`
@@ -74,12 +74,14 @@ cloud-demo/
 - `src/views/` 存放页面
 - `src/api/` 存放接口封装
 - `src/utils/request.js` 定义统一请求实例
+- `src/views/MyCenter.vue` 包含“我的志愿足迹”导出入口
+- `src/components/ActivityImageUploader.vue` 为活动多图上传组件
 
 ## 文档分工
 
 - `README.md`：总入口
 - `QUICKSTART.md`：本机快速运行
-- `DEPLOY.md`：部署和 Nginx
+- `DEPLOY.md`：部署、Docker 和本机 Jenkins 自动发布
 - `ARCHITECTURE.md`：架构说明
 - `API_TEST.md`：接口测试
 - `CHECKLIST.md`：验收项
