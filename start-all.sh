@@ -7,25 +7,25 @@ echo ""
 
 echo "[1/4] 启动监控服务 (monitor-service) - 端口: 9100"
 cd services/monitor-service
-nohup mvn spring-boot:run > ../../logs/monitor-service.log 2>&1 &
+nohup env APP_LOG_FILE=../../monitor-service/logs/debug.log mvn spring-boot:run > /dev/null 2>&1 &
 cd ../..
 sleep 15
 
 echo "[2/4] 启动网关服务 (gateway-service) - 端口: 9000"
 cd services/gateway-service
-nohup mvn spring-boot:run > ../../logs/gateway-service.log 2>&1 &
+nohup env APP_LOG_FILE=../../gateway-service/logs/debug.log mvn spring-boot:run > /dev/null 2>&1 &
 cd ../..
 sleep 15
 
 echo "[3/4] 启动用户服务 (user-service) - 端口: 8100"
 cd services/user-service
-nohup mvn spring-boot:run > ../../logs/user-service.log 2>&1 &
+nohup env APP_LOG_FILE=../../user-service/logs/debug.log mvn spring-boot:run > /dev/null 2>&1 &
 cd ../..
 sleep 15
 
 echo "[4/4] 启动活动服务 (activity-service) - 端口: 8200"
 cd services/activity-service
-nohup mvn spring-boot:run > ../../logs/activity-service.log 2>&1 &
+nohup env APP_LOG_FILE=../../activity-service/logs/debug.log mvn spring-boot:run > /dev/null 2>&1 &
 cd ../..
 
 echo ""

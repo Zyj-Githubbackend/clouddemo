@@ -43,6 +43,7 @@ CREATE TABLE vol_activity (
     id                      BIGINT        PRIMARY KEY AUTO_INCREMENT COMMENT '活动ID',
     title                   VARCHAR(200)  NOT NULL COMMENT '活动标题',
     description             TEXT          COMMENT '活动详情',
+    image_key               TEXT          COMMENT '活动图片对象键列表，逗号分隔',
     location                VARCHAR(200)  COMMENT '服务地点',
     max_participants        INT           NOT NULL DEFAULT 50 COMMENT '最大招募人数',
     current_participants    INT           NOT NULL DEFAULT 0  COMMENT '当前报名人数',

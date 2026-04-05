@@ -47,6 +47,23 @@ startup.cmd -m standalone
 mvn clean install -DskipTests
 ```
 
+活动图片上传默认已经内置了这组 MinIO 配置，本机直接启动 `ActivityApplication` 即可：
+
+```powershell
+$env:MINIO_ENDPOINT="http://127.0.0.1:9005"
+$env:MINIO_ACCESS_KEY="root"
+$env:MINIO_SECRET_KEY="12345678"
+$env:MINIO_BUCKET="activity-images"
+```
+
+如果你不设置环境变量，`activity-service` 会默认使用上面这组值。
+
+如果数据库不是刚用 `database/init.sql` 初始化，而是已有存量库，请先执行：
+
+```sql
+ALTER TABLE vol_activity ADD COLUMN image_key TEXT COMMENT '活动图片对象键列表，逗号分隔';
+```
+
 启动：
 
 - `UserApplication`
@@ -111,11 +128,19 @@ cd D:\nginx-1.28.3
 - MySQL
 - Redis
 - Nacos
+- MinIO
 - `user-service`
 - `activity-service`
 - `gateway-service`
 - `monitor-service`
 - 前端 Nginx 容器
+
+并且每个微服务现在都有独立 Dockerfile，可用于单独构建和发布：
+
+- [services/user-service/Dockerfile](services/user-service/Dockerfile)
+- [services/activity-service/Dockerfile](services/activity-service/Dockerfile)
+- [services/gateway-service/Dockerfile](services/gateway-service/Dockerfile)
+- [services/monitor-service/Dockerfile](services/monitor-service/Dockerfile)
 
 启动命令：
 
@@ -131,19 +156,48 @@ docker compose down
 
 默认访问地址：
 
-- 前台：`http://localhost:8080/`
-- 监控后台：`http://localhost:8080/monitor/`
+- 前台：`http://localhost:8081/`
+- 监控后台：`http://localhost:8081/monitor/`
 - 网关：`http://localhost:9001`
 - 监控：`http://localhost:9101`
 - Nacos：`http://localhost:8849/nacos`
+- MinIO API：`http://localhost:9007`
+- MinIO 控制台：`http://localhost:9008`
+
+同校园网访问地址：
+
+- 前台：`http://你的校园网IPv4:8081/`
+- 监控后台：`http://你的校园网IPv4:8081/monitor/`
+- 网关：`http://你的校园网IPv4:9001`
 
 说明：
 
-- 前端容器端口使用 `8080:80`，避免和宿主机现有 Nginx 冲突
+- 前端容器端口使用 `8081:80`，避免和宿主机现有 Nginx 冲突
 - Nacos、网关、监控的宿主机端口分别为 `8849`、`9001`、`9101`，避免和本机同名服务冲突
+- Compose 已内置 MinIO，宿主机端口映射为 `9007`（API）和 `9008`（控制台）
 - 数据库初始化脚本会挂载 `database/init.sql`
 - 如果宿主机已设置 `DEEPSEEK_API_KEY`，Compose 会透传给 `activity-service`
+- Docker 内部默认使用 `http://minio:9000`
+- Compose 默认使用 MinIO 账号 `root`、密码 `12345678`、bucket `activity-images`
+- 如果 MinIO 的账号、密码或 bucket 与默认值不同，请在 `docker compose up` 前设置 `MINIO_ENDPOINT`、`MINIO_ACCESS_KEY`、`MINIO_SECRET_KEY`、`MINIO_BUCKET`
+- 如果你希望这些覆盖值持久保留，建议参考仓库根目录 `.env.example` 创建 `.env`
 - `database/init.sql` 顶部已加入 `SET NAMES utf8mb4;`，用于避免 MySQL 容器初始化时中文按错误字符集导入
+- 同校园网分享时，请先通过 `ipconfig` 确认宿主机当前 IPv4 地址
+- Windows 防火墙至少需要放行 `8081`；如果需要让同学直接调接口，再额外放行 `9001`
+- 如果同学无法访问，而你本机可以访问 `http://localhost:8081/`，优先排查防火墙和校园网是否启用了终端互访隔离
+
+### 单独构建某个微服务
+
+如果你不是整套用 Compose，而是要单独发布某个微服务，可以直接在仓库根目录执行：
+
+```bash
+docker build -f services/user-service/Dockerfile -t cloud-demo/user-service:latest .
+docker build -f services/activity-service/Dockerfile -t cloud-demo/activity-service:latest .
+docker build -f services/gateway-service/Dockerfile -t cloud-demo/gateway-service:latest .
+docker build -f services/monitor-service/Dockerfile -t cloud-demo/monitor-service:latest .
+```
+
+随后按你的部署环境，为容器补充对应的数据库、Redis、Nacos、JWT、MinIO 等环境变量即可。
 
 ### Docker 中文乱码修复
 
@@ -203,6 +257,14 @@ curl http://127.0.0.1:9000/activity/list?page=1&size=10
 curl http://127.0.0.1:9100/
 ```
 
+Docker 前端联通性：
+
+```powershell
+ipconfig
+curl http://127.0.0.1:8081/
+netstat -ano | findstr :8081
+```
+
 ## 六、部署验收清单
 
 - [ ] `database/init.sql` 已执行
@@ -213,5 +275,6 @@ curl http://127.0.0.1:9100/
 - [ ] Nginx 已成功加载配置
 - [ ] `http://localhost/` 可访问
 - [ ] `http://localhost/monitor/` 可访问
-- [ ] 或者 Docker 模式下 `http://localhost:8080/` 可访问
-- [ ] 或者 Docker 模式下 `http://localhost:8080/monitor/` 可访问
+- [ ] 或者 Docker 模式下 `http://localhost:8081/` 可访问
+- [ ] 或者 Docker 模式下 `http://localhost:8081/monitor/` 可访问
+- [ ] 如果需要同校园网访问，`http://你的校园网IPv4:8081/` 可从另一台设备打开

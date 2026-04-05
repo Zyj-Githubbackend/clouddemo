@@ -16,6 +16,8 @@ public class Activity {
     private String title;
     
     private String description;
+
+    private String imageKey;
     
     private String location;
     

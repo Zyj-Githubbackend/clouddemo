@@ -49,6 +49,13 @@
 
       <div v-loading="loading" class="grid-list">
         <article v-for="row in activities" :key="row.id" class="activity-card" @click="goToDetail(row.id)">
+          <div class="cover" :class="{ empty: !row.imageUrl }">
+            <img v-if="row.imageUrl" :src="row.imageUrl" :alt="row.title">
+            <div v-else class="cover-fallback">
+              <span>{{ row.category || '志愿活动' }}</span>
+            </div>
+          </div>
+
           <div class="card-top">
             <el-tag :type="getRecruitmentDisplay(row).type" effect="light">{{ getRecruitmentDisplay(row).text }}</el-tag>
             <el-tag :type="getActivityPhaseDisplay(row).type" effect="plain">{{ getActivityPhaseDisplay(row).text }}</el-tag>
@@ -255,7 +262,7 @@ onMounted(() => { handleSearch() })
 .activity-card {
   border-radius: 16px;
   background: white;
-  padding: 16px;
+  padding: 14px;
   cursor: pointer;
   box-shadow: 0 10px 24px rgba(0, 20, 83, 0.06);
   transition: all 0.22s ease;
@@ -270,20 +277,20 @@ onMounted(() => { handleSearch() })
   display: flex;
   gap: 8px;
   flex-wrap: wrap;
-  margin-bottom: 10px;
+  margin: 0 2px 10px;
 }
 
 .activity-card h3 {
   font-size: 18px;
   line-height: 1.4;
   min-height: 52px;
-  margin-bottom: 6px;
+  margin: 0 2px 6px;
 }
 
 .meta {
   font-size: 13px;
   color: #6c7187;
-  margin-bottom: 8px;
+  margin: 0 2px 8px;
 }
 
 .line {
@@ -292,17 +299,43 @@ onMounted(() => { handleSearch() })
   gap: 6px;
   font-size: 14px;
   color: #4f546a;
-  margin-bottom: 6px;
+  margin: 0 2px 6px;
 }
 
 .progress-wrap {
-  margin-top: 10px;
+  margin: 10px 2px 0;
 }
 
 .progress-label {
   font-size: 12px;
   color: #878ca1;
   margin-bottom: 4px;
+}
+
+.cover {
+  overflow: hidden;
+  height: 188px;
+  border-radius: 14px;
+  margin-bottom: 12px;
+  background: linear-gradient(145deg, #dde8ff, #f8efe1);
+}
+
+.cover img {
+  width: 100%;
+  height: 100%;
+  display: block;
+  object-fit: cover;
+}
+
+.cover-fallback {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  align-items: flex-end;
+  padding: 18px;
+  color: #40506e;
+  font-weight: 700;
+  letter-spacing: 0.4px;
 }
 
 .pagination-bar {

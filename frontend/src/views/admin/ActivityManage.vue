@@ -132,6 +132,14 @@
           <el-form-item label="活动详情" prop="description">
             <el-input v-model="editForm.description" type="textarea" :rows="6" placeholder="活动详情" />
           </el-form-item>
+          <el-form-item label="活动图片">
+            <ActivityImageUploader
+              :image-keys="editForm.imageKeys"
+              :image-urls="editForm.imageUrls"
+              @update:image-keys="(value) => { editForm.imageKeys = value }"
+              @update:image-urls="(value) => { editForm.imageUrls = value }"
+            />
+          </el-form-item>
           <el-form-item label="招募人数" prop="maxParticipants">
             <el-input-number v-model="editForm.maxParticipants" :min="1" :max="500" />
             <span class="form-tip">需大于等于当前已报名人数</span>
@@ -202,6 +210,7 @@ import {
 } from '@/api/activity'
 import { getRecruitmentDisplay } from '@/utils/recruitment'
 import { getActivityPhaseDisplay } from '@/utils/activityPhase'
+import ActivityImageUploader from '@/components/ActivityImageUploader.vue'
 import dayjs from 'dayjs'
 
 const router = useRouter()
@@ -221,6 +230,8 @@ const editForm = reactive({
   category: '',
   location: '',
   description: '',
+  imageKeys: [],
+  imageUrls: [],
   maxParticipants: 20,
   volunteerHours: 2,
   startTime: '',
@@ -339,6 +350,8 @@ const resetEditForm = () => {
     category: '',
     location: '',
     description: '',
+    imageKeys: [],
+    imageUrls: [],
     maxParticipants: 20,
     volunteerHours: 2,
     startTime: '',
@@ -361,6 +374,8 @@ const openEditDialog = async (row) => {
       category: d.category ?? '',
       location: d.location ?? '',
       description: d.description ?? '',
+      imageKeys: d.imageKeys ?? (d.imageKey ? [d.imageKey] : []),
+      imageUrls: d.imageUrls ?? (d.imageUrl ? [d.imageUrl] : []),
       maxParticipants: d.maxParticipants ?? 20,
       volunteerHours: d.volunteerHours != null ? Number(d.volunteerHours) : 2,
       startTime: d.startTime ?? '',
@@ -404,7 +419,19 @@ const submitEdit = async () => {
   await editFormRef.value.validate()
   editSubmitLoading.value = true
   try {
-    await updateActivity(editingId.value, { ...editForm })
+    await updateActivity(editingId.value, {
+      title: editForm.title,
+      category: editForm.category,
+      location: editForm.location,
+      description: editForm.description,
+      imageKeys: editForm.imageKeys,
+      maxParticipants: editForm.maxParticipants,
+      volunteerHours: editForm.volunteerHours,
+      startTime: editForm.startTime,
+      endTime: editForm.endTime,
+      registrationStartTime: editForm.registrationStartTime,
+      registrationDeadline: editForm.registrationDeadline
+    })
     ElMessage.success('保存成功')
     editDialogVisible.value = false
     fetchActivities()

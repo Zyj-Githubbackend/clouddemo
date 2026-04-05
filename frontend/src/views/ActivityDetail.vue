@@ -3,16 +3,29 @@
     <div class="detail-page page-container" v-loading="loading">
       <template v-if="activity.id">
         <section class="hero">
-          <div class="hero-tags">
-            <el-tag :type="activityPhaseDisplay.type" effect="light">{{ activityPhaseDisplay.text }}</el-tag>
-            <el-tag :type="recruitmentDisplay.type" effect="light">{{ recruitmentDisplay.text }}</el-tag>
-            <el-tag type="info" effect="plain">{{ activity.category }}</el-tag>
+          <div class="hero-copy">
+            <div class="hero-tags">
+              <el-tag :type="activityPhaseDisplay.type" effect="light">{{ activityPhaseDisplay.text }}</el-tag>
+              <el-tag :type="recruitmentDisplay.type" effect="light">{{ recruitmentDisplay.text }}</el-tag>
+              <el-tag type="info" effect="plain">{{ activity.category }}</el-tag>
+            </div>
+            <h1>{{ activity.title }}</h1>
+            <div class="hero-meta">
+              <span><el-icon><Location /></el-icon>{{ activity.location }}</span>
+              <span><el-icon><Clock /></el-icon>{{ activity.volunteerHours }} 小时</span>
+              <span><el-icon><User /></el-icon>{{ activity.currentParticipants }} / {{ activity.maxParticipants }}</span>
+            </div>
           </div>
-          <h1>{{ activity.title }}</h1>
-          <div class="hero-meta">
-            <span><el-icon><Location /></el-icon>{{ activity.location }}</span>
-            <span><el-icon><Clock /></el-icon>{{ activity.volunteerHours }} 小时</span>
-            <span><el-icon><User /></el-icon>{{ activity.currentParticipants }} / {{ activity.maxParticipants }}</span>
+          <div class="hero-cover" :class="{ empty: !hasGalleryImages }">
+            <el-carousel v-if="hasGalleryImages" height="240px" indicator-position="outside">
+              <el-carousel-item v-for="(imageUrl, index) in galleryImages" :key="`${activity.id}-${index}`">
+                <img :src="imageUrl" :alt="`${activity.title}-${index + 1}`">
+              </el-carousel-item>
+            </el-carousel>
+            <div v-else class="hero-fallback">
+              <span>{{ activity.category || '志愿活动' }}</span>
+              <small>{{ activity.location || '活动封面待上传' }}</small>
+            </div>
           </div>
         </section>
 
@@ -112,6 +125,13 @@ const activity = ref({})
 
 const activityPhaseDisplay = computed(() => getActivityPhaseDisplay(activity.value))
 const recruitmentDisplay = computed(() => getRecruitmentDisplay(activity.value))
+const galleryImages = computed(() => {
+  if (Array.isArray(activity.value.imageUrls) && activity.value.imageUrls.length > 0) {
+    return activity.value.imageUrls
+  }
+  return activity.value.imageUrl ? [activity.value.imageUrl] : []
+})
+const hasGalleryImages = computed(() => galleryImages.value.length > 0)
 
 const canRegister = computed(() => {
   const a = activity.value
@@ -175,7 +195,15 @@ onMounted(() => { fetchActivity() })
   border-radius: 24px;
   padding: 30px 26px;
   color: white;
+  display: grid;
+  grid-template-columns: minmax(0, 1.2fr) minmax(260px, 380px);
+  gap: 22px;
+  align-items: center;
   background: linear-gradient(130deg, var(--cv-primary), var(--cv-primary-weak));
+}
+
+.hero-copy {
+  min-width: 0;
 }
 
 .hero-tags {
@@ -202,6 +230,49 @@ onMounted(() => { fetchActivity() })
   align-items: center;
   gap: 6px;
   opacity: 0.92;
+}
+
+.hero-cover {
+  min-height: 240px;
+  border-radius: 20px;
+  overflow: hidden;
+  background: rgba(255, 255, 255, 0.14);
+  border: 1px solid rgba(255, 255, 255, 0.18);
+}
+
+.hero-cover img {
+  width: 100%;
+  height: 100%;
+  min-height: 240px;
+  object-fit: cover;
+  display: block;
+}
+
+.hero-cover :deep(.el-carousel),
+.hero-cover :deep(.el-carousel__container) {
+  height: 240px;
+}
+
+.hero-fallback {
+  min-height: 240px;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-end;
+  padding: 22px;
+  background:
+    radial-gradient(circle at top right, rgba(255, 255, 255, 0.35), transparent 42%),
+    linear-gradient(140deg, rgba(255, 255, 255, 0.18), rgba(255, 255, 255, 0.05));
+}
+
+.hero-fallback span {
+  font-size: 28px;
+  font-weight: 800;
+  line-height: 1.1;
+}
+
+.hero-fallback small {
+  margin-top: 8px;
+  opacity: 0.85;
 }
 
 .panel {
@@ -308,6 +379,7 @@ onMounted(() => { fetchActivity() })
 @media (max-width: 768px) {
   .hero {
     padding: 22px 16px;
+    grid-template-columns: 1fr;
   }
 
   .hero h1 {

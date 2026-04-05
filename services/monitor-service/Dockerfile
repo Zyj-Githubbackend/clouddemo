@@ -1,6 +1,5 @@
 FROM public.ecr.aws/docker/library/maven:3.9.9-eclipse-temurin-17 AS build
 
-ARG MODULE
 WORKDIR /workspace
 
 COPY pom.xml ./
@@ -11,15 +10,14 @@ COPY services/user-service/pom.xml services/user-service/pom.xml
 COPY services/activity-service/pom.xml services/activity-service/pom.xml
 COPY services/monitor-service/pom.xml services/monitor-service/pom.xml
 
-RUN mvn -B -pl services/${MODULE} -am dependency:go-offline
+RUN mvn -B -pl services/monitor-service -am dependency:go-offline
 
-COPY services services
+COPY services/monitor-service services/monitor-service
 
-RUN mvn -B -pl services/${MODULE} -am clean package -DskipTests
+RUN mvn -B -pl services/monitor-service -am clean package -DskipTests
 
 FROM public.ecr.aws/docker/library/eclipse-temurin:17-jre
 
-ARG MODULE
 WORKDIR /app
 ENV APP_LOG_FILE=/app/logs/debug.log
 ENV TZ=Asia/Shanghai
@@ -27,6 +25,6 @@ ENV JAVA_TOOL_OPTIONS=-Duser.timezone=Asia/Shanghai
 
 RUN mkdir -p /app/logs
 
-COPY --from=build /workspace/services/${MODULE}/target/${MODULE}-0.0.1-SNAPSHOT.jar app.jar
+COPY --from=build /workspace/services/monitor-service/target/monitor-service-0.0.1-SNAPSHOT.jar app.jar
 
 ENTRYPOINT ["java", "-jar", "/app/app.jar"]

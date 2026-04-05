@@ -6,6 +6,8 @@ import org.example.dto.RegisterRequest;
 import org.example.service.UserService;
 import org.example.vo.LoginResponse;
 import org.example.vo.UserInfo;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -14,31 +16,32 @@ import java.util.Map;
 @RestController
 @RequestMapping("/user")
 public class UserController {
-    
+
+    private static final Logger log = LoggerFactory.getLogger(UserController.class);
     private final UserService userService;
-    
+
     public UserController(UserService userService) {
         this.userService = userService;
     }
-    
+
     @PostMapping("/login")
     public Result<LoginResponse> login(@RequestBody LoginRequest request) {
         LoginResponse response = userService.login(request);
         return Result.success(response);
     }
-    
+
     @PostMapping("/register")
     public Result<Void> register(@RequestBody RegisterRequest request) {
         userService.register(request);
         return Result.success();
     }
-    
+
     @GetMapping("/info")
     public Result<UserInfo> getUserInfo(@RequestHeader("X-User-Id") Long userId) {
         UserInfo userInfo = userService.getUserInfo(userId);
         return Result.success(userInfo);
     }
-    
+
     @PutMapping("/update")
     public Result<Void> updateUserInfo(
             @RequestBody UserInfo userInfo,
@@ -46,7 +49,7 @@ public class UserController {
         userService.updateUserInfo(userId, userInfo);
         return Result.success();
     }
-    
+
     @PutMapping("/updatePassword")
     public Result<Void> updatePassword(
             @RequestBody Map<String, String> params,
@@ -57,15 +60,13 @@ public class UserController {
         return Result.success();
     }
 
-    /**
-     * 管理员：查询所有志愿者及其累计时长，支持按姓名/学号/用户名关键字筛选。
-     */
     @GetMapping("/admin/hours")
     public Result<List<UserInfo>> listVolunteerHours(
             @RequestParam(required = false) String keyword,
             @RequestHeader("X-User-Role") String role) {
         if (!"ADMIN".equals(role)) {
-            return Result.forbidden("只有管理员才能查看");
+            log.warn("rejected volunteer hours query for non-admin role={}", role);
+            return Result.forbidden("Only admin can view volunteer hours");
         }
         return Result.success(userService.listVolunteerHours(keyword));
     }

@@ -10,6 +10,7 @@ cloud-demo/
 │  └─ nginx/
 │     ├─ cloud-demo.conf
 │     └─ cloud-demo.local.conf
+├─ .env.example
 ├─ frontend/
 │  ├─ src/
 │  │  ├─ api/
@@ -24,9 +25,13 @@ cloud-demo/
 ├─ services/
 │  ├─ common/
 │  ├─ gateway-service/
+│  │  └─ Dockerfile
 │  ├─ user-service/
+│  │  └─ Dockerfile
 │  ├─ activity-service/
+│  │  └─ Dockerfile
 │  └─ monitor-service/
+│     └─ Dockerfile
 ├─ API_TEST.md
 ├─ ARCHITECTURE.md
 ├─ CHECKLIST.md
@@ -53,14 +58,15 @@ cloud-demo/
 
 - 保存后端通用 Docker 构建文件
 - `backend.Dockerfile` 通过 `MODULE` 参数构建不同微服务镜像
+- 当前仓库也为每个微服务补充了独立 `Dockerfile`，更适合单独部署
 
 ### `services/`
 
 - `common/`：公共工具和统一返回结构
-- `gateway-service/`：统一入口、JWT 鉴权、转发
-- `user-service/`：用户相关业务
-- `activity-service/`：活动和报名相关业务
-- `monitor-service/`：监控中心
+- `gateway-service/`：统一入口、JWT 鉴权、转发，内含独立 Dockerfile
+- `user-service/`：用户相关业务，内含独立 Dockerfile
+- `activity-service/`：活动和报名相关业务，内含独立 Dockerfile
+- `monitor-service/`：监控中心，内含独立 Dockerfile
 
 ### `frontend/`
 

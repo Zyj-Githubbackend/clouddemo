@@ -43,7 +43,8 @@
                 <el-form-item label="招募人数" prop="maxParticipants">
                   <el-input-number
                     v-model="form.maxParticipants"
-                    :min="1" :max="500"
+                    :min="1"
+                    :max="500"
                     size="large"
                     style="width:100%"
                     controls-position="right"
@@ -54,7 +55,9 @@
                 <el-form-item label="志愿时长（小时）" prop="volunteerHours">
                   <el-input-number
                     v-model="form.volunteerHours"
-                    :min="0.5" :max="24" :step="0.5"
+                    :min="0.5"
+                    :max="24"
+                    :step="0.5"
                     size="large"
                     style="width:100%"
                     controls-position="right"
@@ -71,7 +74,7 @@
                 <div class="ai-bar">
                   <el-input
                     v-model="aiKeywords"
-                    placeholder="输入关键词辅助AI生成，如：图书馆、值班"
+                    placeholder="输入关键词辅助 AI 生成，如：图书馆、值班"
                     size="small"
                     class="ai-input"
                     clearable
@@ -95,6 +98,16 @@
         </el-col>
 
         <el-col :xs="24" :md="9">
+          <el-card class="section" shadow="never">
+            <template #header><h3>活动图片</h3></template>
+            <ActivityImageUploader
+              :image-keys="form.imageKeys"
+              :image-urls="form.imageUrls"
+              @update:image-keys="(value) => { form.imageKeys = value }"
+              @update:image-urls="(value) => { form.imageUrls = value }"
+            />
+          </el-card>
+
           <el-card class="section" shadow="never">
             <template #header><h3>时间安排</h3></template>
 
@@ -164,10 +177,11 @@
 </template>
 
 <script setup>
-import { ref, reactive } from 'vue'
+import { reactive, ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
 import { createActivity, generateDescription } from '@/api/activity'
+import ActivityImageUploader from '@/components/ActivityImageUploader.vue'
 
 const router = useRouter()
 const formRef = ref()
@@ -175,11 +189,13 @@ const loading = ref(false)
 const aiLoading = ref(false)
 const aiKeywords = ref('')
 
-const form = reactive({
+const initialFormState = () => ({
   title: '',
   category: '',
   location: '',
   description: '',
+  imageKeys: [],
+  imageUrls: [],
   maxParticipants: 20,
   volunteerHours: 2,
   startTime: '',
@@ -187,6 +203,8 @@ const form = reactive({
   registrationStartTime: '',
   registrationDeadline: ''
 })
+
+const form = reactive(initialFormState())
 
 const rules = {
   title: [{ required: true, message: '请输入活动标题', trigger: 'blur' }],
@@ -198,10 +216,16 @@ const rules = {
   startTime: [
     { required: true, message: '请选择活动开始时间', trigger: 'change' },
     {
-      validator: (_r, v, cb) => {
-        if (!v || !form.endTime) { cb(); return }
-        if (new Date(v) >= new Date(form.endTime)) { cb(new Error('开始时间须早于结束时间')); return }
-        cb()
+      validator: (_rule, value, callback) => {
+        if (!value || !form.endTime) {
+          callback()
+          return
+        }
+        if (new Date(value) >= new Date(form.endTime)) {
+          callback(new Error('开始时间需早于结束时间'))
+          return
+        }
+        callback()
       },
       trigger: 'change'
     }
@@ -209,10 +233,16 @@ const rules = {
   endTime: [
     { required: true, message: '请选择活动结束时间', trigger: 'change' },
     {
-      validator: (_r, v, cb) => {
-        if (!v || !form.startTime) { cb(); return }
-        if (new Date(v) <= new Date(form.startTime)) { cb(new Error('结束时间须晚于开始时间')); return }
-        cb()
+      validator: (_rule, value, callback) => {
+        if (!value || !form.startTime) {
+          callback()
+          return
+        }
+        if (new Date(value) <= new Date(form.startTime)) {
+          callback(new Error('结束时间需晚于开始时间'))
+          return
+        }
+        callback()
       },
       trigger: 'change'
     }
@@ -220,10 +250,16 @@ const rules = {
   registrationStartTime: [
     { required: true, message: '请选择招募开始时间', trigger: 'change' },
     {
-      validator: (_r, v, cb) => {
-        if (!v || !form.registrationDeadline) { cb(); return }
-        if (new Date(form.registrationDeadline) <= new Date(v)) { cb(new Error('招募开始须早于截止时间')); return }
-        cb()
+      validator: (_rule, value, callback) => {
+        if (!value || !form.registrationDeadline) {
+          callback()
+          return
+        }
+        if (new Date(form.registrationDeadline) <= new Date(value)) {
+          callback(new Error('招募开始需早于截止时间'))
+          return
+        }
+        callback()
       },
       trigger: 'change'
     }
@@ -231,11 +267,20 @@ const rules = {
   registrationDeadline: [
     { required: true, message: '请选择报名截止时间', trigger: 'change' },
     {
-      validator: (_r, v, cb) => {
-        if (!v || !form.registrationStartTime) { cb(); return }
-        if (new Date(v) <= new Date(form.registrationStartTime)) { cb(new Error('截止须晚于招募开始')); return }
-        if (form.startTime && new Date(v) > new Date(form.startTime)) { cb(new Error('报名截止不能晚于活动开始')); return }
-        cb()
+      validator: (_rule, value, callback) => {
+        if (!value || !form.registrationStartTime) {
+          callback()
+          return
+        }
+        if (new Date(value) <= new Date(form.registrationStartTime)) {
+          callback(new Error('截止需晚于招募开始'))
+          return
+        }
+        if (form.startTime && new Date(value) > new Date(form.startTime)) {
+          callback(new Error('报名截止不能晚于活动开始'))
+          return
+        }
+        callback()
       },
       trigger: 'change'
     }
@@ -268,7 +313,19 @@ const handleSubmit = async () => {
   await formRef.value.validate()
   loading.value = true
   try {
-    await createActivity(form)
+    await createActivity({
+      title: form.title,
+      category: form.category,
+      location: form.location,
+      description: form.description,
+      imageKeys: form.imageKeys,
+      maxParticipants: form.maxParticipants,
+      volunteerHours: form.volunteerHours,
+      startTime: form.startTime,
+      endTime: form.endTime,
+      registrationStartTime: form.registrationStartTime,
+      registrationDeadline: form.registrationDeadline
+    })
     ElMessage.success('活动发布成功')
     router.push('/admin/activities')
   } catch (error) {
@@ -280,6 +337,7 @@ const handleSubmit = async () => {
 
 const handleReset = () => {
   formRef.value.resetFields()
+  Object.assign(form, initialFormState())
   aiKeywords.value = ''
 }
 </script>
@@ -378,7 +436,3 @@ const handleReset = () => {
   }
 }
 </style>
-
-
-
-

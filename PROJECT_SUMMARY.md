@@ -21,6 +21,7 @@
 | `database/init.sql` | 数据库初始化和示例数据 |
 | `deploy/nginx/` | 本机 Nginx 配置 |
 | `deploy/docker/` | 后端通用 Docker 构建文件 |
+| `services/*/Dockerfile` | 每个微服务独立镜像构建文件 |
 | `docker-compose.yml` | 一键启动整套容器环境 |
 
 ## 当前推荐访问方式

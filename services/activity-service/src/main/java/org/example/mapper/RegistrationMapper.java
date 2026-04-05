@@ -13,13 +13,25 @@ import java.util.List;
 @Mapper
 public interface RegistrationMapper extends BaseMapper<Registration> {
     
-    @Select("SELECT r.id, r.activity_id, a.title as activity_title, a.location, a.volunteer_hours, " +
-            "a.start_time, r.registration_time, r.check_in_status, r.hours_confirmed, r.status " +
+    @Select("SELECT r.id, r.user_id AS userId, r.activity_id AS activityId, a.title AS activityTitle, a.location, " +
+            "a.volunteer_hours AS volunteerHours, a.start_time AS startTime, r.registration_time AS registrationTime, " +
+            "r.check_in_status AS checkInStatus, r.check_in_time AS checkInTime, " +
+            "r.hours_confirmed AS hoursConfirmed, r.confirm_time AS confirmTime, r.status " +
             "FROM vol_registration r " +
             "LEFT JOIN vol_activity a ON r.activity_id = a.id " +
             "WHERE r.user_id = #{userId} " +
             "ORDER BY r.create_time DESC")
     List<RegistrationVO> selectUserRegistrations(Long userId);
+
+    @Select("SELECT r.id, r.user_id AS userId, r.activity_id AS activityId, a.title AS activityTitle, a.location, " +
+            "a.volunteer_hours AS volunteerHours, a.start_time AS startTime, r.registration_time AS registrationTime, " +
+            "r.check_in_status AS checkInStatus, r.check_in_time AS checkInTime, " +
+            "r.hours_confirmed AS hoursConfirmed, r.confirm_time AS confirmTime, r.status " +
+            "FROM vol_registration r " +
+            "INNER JOIN vol_activity a ON r.activity_id = a.id " +
+            "WHERE r.user_id = #{userId} AND r.status = 'REGISTERED' AND r.hours_confirmed = 1 " +
+            "ORDER BY r.confirm_time DESC, r.create_time DESC")
+    List<RegistrationVO> selectConfirmedRegistrationsByUserId(@Param("userId") Long userId);
 
     @Select("SELECT r.id, r.user_id AS userId, r.activity_id AS activityId, a.title AS activityTitle, a.location, " +
             "a.volunteer_hours AS volunteerHours, a.start_time AS startTime, r.registration_time AS registrationTime, " +

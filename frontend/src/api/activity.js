@@ -1,3 +1,4 @@
+import axios from 'axios'
 import request from '@/utils/request'
 
 // 获取活动列表（空字符串 status/category 不传，避免后端按 "" 精确匹配导致无数据）
@@ -82,6 +83,16 @@ export const getMyRegistrations = () => {
   })
 }
 
+export const exportConfirmedMyRegistrations = () => {
+  const token = localStorage.getItem('token')
+  return axios({
+    url: '/api/activity/myRegistrations/exportConfirmed',
+    method: 'get',
+    responseType: 'blob',
+    headers: token ? { Authorization: `Bearer ${token}` } : {}
+  })
+}
+
 // 核销时长
 export const confirmHours = (registrationId) => {
   return request({
@@ -137,5 +148,18 @@ export const generateDescription = (data) => {
     url: '/activity/ai/generate',
     method: 'post',
     data
+  })
+}
+
+export const uploadActivityImage = (file) => {
+  const formData = new FormData()
+  formData.append('file', file)
+  return request({
+    url: '/activity/admin/image',
+    method: 'post',
+    data: formData,
+    headers: {
+      'Content-Type': 'multipart/form-data'
+    }
   })
 }

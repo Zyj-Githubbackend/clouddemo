@@ -31,18 +31,35 @@ services:
     networks:
       - cloud-demo
 
+  minio:
+    image: minio/minio:latest
+    container_name: cloud-demo-minio
+    restart: unless-stopped
+    command: server /data --console-address ":9001"
+    environment:
+      MINIO_ROOT_USER: ${MINIO_ACCESS_KEY:-root}
+      MINIO_ROOT_PASSWORD: ${MINIO_SECRET_KEY:-12345678}
+    ports:
+      - "9007:9000"
+      - "9008:9001"
+    volumes:
+      - minio-data:/data
+    networks:
+      - cloud-demo
+
   user-service:
     build:
       context: .
-      dockerfile: deploy/docker/backend.Dockerfile
-      args:
-        MODULE: user-service
+      dockerfile: services/user-service/Dockerfile
     container_name: cloud-demo-user-service
     restart: unless-stopped
     depends_on:
       - mysql
       - nacos
     environment:
+      APP_LOG_FILE: /app/logs/debug.log
+      TZ: Asia/Shanghai
+      JAVA_TOOL_OPTIONS: -Duser.timezone=Asia/Shanghai
       SPRING_CLOUD_NACOS_SERVER_ADDR: nacos:8848
       SPRING_CLOUD_NACOS_DISCOVERY_SERVER_ADDR: nacos:8848
       SPRING_DATASOURCE_URL: jdbc:mysql://mysql:3306/volunteer_platform?useUnicode=true&characterEncoding=utf-8&useSSL=false&serverTimezone=Asia/Shanghai&allowPublicKeyRetrieval=true
@@ -50,22 +67,26 @@ services:
       SPRING_DATASOURCE_PASSWORD: 123888
       JWT_SECRET: volunteerPlatformSecretKey2024
       JWT_EXPIRATION: 86400000
+    volumes:
+      - ./user-service/logs:/app/logs
     networks:
       - cloud-demo
 
   activity-service:
     build:
       context: .
-      dockerfile: deploy/docker/backend.Dockerfile
-      args:
-        MODULE: activity-service
+      dockerfile: services/activity-service/Dockerfile
     container_name: cloud-demo-activity-service
     restart: unless-stopped
     depends_on:
       - mysql
       - redis
       - nacos
+      - minio
     environment:
+      APP_LOG_FILE: /app/logs/debug.log
+      TZ: Asia/Shanghai
+      JAVA_TOOL_OPTIONS: -Duser.timezone=Asia/Shanghai
       SPRING_CLOUD_NACOS_SERVER_ADDR: nacos:8848
       SPRING_CLOUD_NACOS_DISCOVERY_SERVER_ADDR: nacos:8848
       SPRING_DATASOURCE_URL: jdbc:mysql://mysql:3306/volunteer_platform?useUnicode=true&characterEncoding=utf-8&useSSL=false&serverTimezone=Asia/Shanghai&allowPublicKeyRetrieval=true
@@ -74,15 +95,20 @@ services:
       SPRING_DATA_REDIS_HOST: redis
       SPRING_DATA_REDIS_PORT: 6379
       AI_API_KEY: ${DEEPSEEK_API_KEY:-}
+      MINIO_ENDPOINT: ${MINIO_ENDPOINT:-http://minio:9000}
+      MINIO_ACCESS_KEY: ${MINIO_ACCESS_KEY:-root}
+      MINIO_SECRET_KEY: ${MINIO_SECRET_KEY:-12345678}
+      MINIO_BUCKET: ${MINIO_BUCKET:-activity-images}
+      MINIO_PUBLIC_BASE_URL: ${MINIO_PUBLIC_BASE_URL:-/api}
+    volumes:
+      - ./activity-service/logs:/app/logs
     networks:
       - cloud-demo
 
   gateway-service:
     build:
       context: .
-      dockerfile: deploy/docker/backend.Dockerfile
-      args:
-        MODULE: gateway-service
+      dockerfile: services/gateway-service/Dockerfile
     container_name: cloud-demo-gateway-service
     restart: unless-stopped
     depends_on:
@@ -90,10 +116,15 @@ services:
       - user-service
       - activity-service
     environment:
+      APP_LOG_FILE: /app/logs/debug.log
+      TZ: Asia/Shanghai
+      JAVA_TOOL_OPTIONS: -Duser.timezone=Asia/Shanghai
       SPRING_CLOUD_NACOS_SERVER_ADDR: nacos:8848
       SPRING_CLOUD_NACOS_DISCOVERY_SERVER_ADDR: nacos:8848
       JWT_SECRET: volunteerPlatformSecretKey2024
       JWT_EXPIRATION: 86400000
+    volumes:
+      - ./gateway-service/logs:/app/logs
     ports:
       - "9001:9000"
     networks:
@@ -102,16 +133,19 @@ services:
   monitor-service:
     build:
       context: .
-      dockerfile: deploy/docker/backend.Dockerfile
-      args:
-        MODULE: monitor-service
+      dockerfile: services/monitor-service/Dockerfile
     container_name: cloud-demo-monitor-service
     restart: unless-stopped
     depends_on:
       - nacos
     environment:
+      APP_LOG_FILE: /app/logs/debug.log
+      TZ: Asia/Shanghai
+      JAVA_TOOL_OPTIONS: -Duser.timezone=Asia/Shanghai
       SPRING_CLOUD_NACOS_SERVER_ADDR: nacos:8848
       SPRING_CLOUD_NACOS_DISCOVERY_SERVER_ADDR: nacos:8848
+    volumes:
+      - ./monitor-service/logs:/app/logs
     ports:
       - "9101:9100"
     networks:
@@ -127,7 +161,7 @@ services:
       - gateway-service
       - monitor-service
     ports:
-      - "8080:80"
+      - "8081:80"
     networks:
       - cloud-demo
 
@@ -137,3 +171,4 @@ networks:
 
 volumes:
   mysql-data:
+  minio-data:

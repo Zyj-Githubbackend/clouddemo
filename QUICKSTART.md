@@ -11,6 +11,7 @@
 - Redis
 - Nacos 2.x
 - Nginx
+- MinIO
 
 ## 步骤 1：初始化数据库
 
@@ -37,13 +38,37 @@ startup.cmd -m standalone
 
 启动后访问 `http://localhost:8848/nacos`，默认账号密码均为 `nacos`。
 
-## 步骤 3：编译后端
+## 步骤 3：启动 MinIO
+
+活动图片上传默认使用下面这组 MinIO 配置：
+
+- 地址：`http://127.0.0.1:9005`
+- 控制台：`http://127.0.0.1:9006`
+- 账号：`root`
+- 密码：`12345678`
+- bucket：`activity-images`
+
+示例启动命令：
+
+```powershell
+$env:MINIO_ROOT_USER="root"
+$env:MINIO_ROOT_PASSWORD="12345678"
+.\minio.exe server D:\miniodata\data2 --console-address "127.0.0.1:9006" --address "127.0.0.1:9005"
+```
+
+如果 `vol_activity` 不是刚通过 `database/init.sql` 初始化，而是旧库升级，还需要先执行：
+
+```sql
+ALTER TABLE vol_activity ADD COLUMN image_key TEXT COMMENT '活动图片对象键列表，逗号分隔';
+```
+
+## 步骤 4：编译后端
 
 ```bash
 mvn clean install -DskipTests
 ```
 
-## 步骤 4：启动后端服务
+## 步骤 5：启动后端服务
 
 建议顺序：
 
@@ -65,7 +90,12 @@ mvn spring-boot:run
 - `9000`：gateway-service
 - `9100`：monitor-service
 
-## 步骤 5：前端运行方式
+说明：
+
+- `activity-service` 已内置 MinIO 默认值，通常不需要额外设置环境变量
+- 如果你修改了 MinIO 端口、账号、密码或 bucket，再用环境变量覆盖即可
+
+## 步骤 6：前端运行方式
 
 开发模式：
 
@@ -87,7 +117,7 @@ npm run build
 
 然后使用 [deploy/nginx/cloud-demo.local.conf](deploy/nginx/cloud-demo.local.conf) 中的规则启动本机 Nginx。
 
-## 步骤 6：验证访问地址
+## 步骤 7：验证访问地址
 
 本机验证：
 
@@ -95,6 +125,7 @@ npm run build
 - 监控后台：`http://localhost/monitor/`
 - 网关直连：`http://localhost:9000`
 - Nacos：`http://localhost:8848/nacos`
+- MinIO 控制台：`http://127.0.0.1:9006`
 
 同校园网访问：
 
@@ -150,11 +181,28 @@ docker compose up --build -d
 
 访问地址：
 
-- 前台：`http://localhost:8080/`
-- 监控后台：`http://localhost:8080/monitor/`
+- 前台：`http://localhost:8081/`
+- 监控后台：`http://localhost:8081/monitor/`
 - 网关直连：`http://localhost:9001`
 - 监控直连：`http://localhost:9101`
 - Nacos：`http://localhost:8849/nacos`
+- MinIO API：`http://localhost:9007`
+- MinIO 控制台：`http://localhost:9008`
+
+同校园网访问：
+
+- 前台：`http://你的校园网IPv4:8081/`
+- 监控后台：`http://你的校园网IPv4:8081/monitor/`
+
+说明：
+
+- 当前 `docker-compose.yml` 已内置 MinIO 服务，`activity-service` 默认连接 `http://minio:9000`
+- 默认 MinIO 凭证为 `root / 12345678`
+- 如果你要改这些值，可以先参考仓库根目录的 `.env.example` 创建自己的 `.env`
+- 现在每个微服务都提供了独立 Dockerfile，除了整套 Compose，也支持单独构建某一个服务镜像
+- 分享给同学校友前，先用 `ipconfig` 查出你电脑当前校园网 IPv4 地址
+- Windows 防火墙至少需要放行 `8081` 端口
+- 如果你本机能访问 `http://localhost:8081/`，别人却打不开 `http://你的校园网IPv4:8081/`，一般是防火墙或校园网隔离问题
 
 如果命令提示无法连接 Docker Engine，请先启动 Docker Desktop。
 
@@ -165,4 +213,4 @@ docker compose down -v
 docker compose up --build -d
 ```
 
-然后再访问 `http://localhost:8080/` 验证中文是否恢复正常。
+然后再访问 `http://localhost:8081/` 验证中文是否恢复正常。
