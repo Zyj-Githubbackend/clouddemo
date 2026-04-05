@@ -18,7 +18,7 @@
 - 活动支持上传多张图片，后台创建和编辑活动时可维护图片列表，详情页可轮播展示
 - 用户可在“我的志愿足迹”页面导出本人已核销志愿时长及对应活动明细 Excel
 - Docker 版前端默认访问地址已调整为 `http://localhost:8081/`
-- 本机 Jenkins 任务可在构建完成后直接调用 `docker compose up -d --build` 完成 Docker 发布
+- 本机 Jenkins 任务可先执行 `mvn -B test`，再调用 `docker compose up -d --build` 完成 Docker 发布
 
 当前仓库已经补充了本机 Nginx 配置，推荐在本机通过 Nginx 统一访问：
 
@@ -144,10 +144,11 @@ docker compose up --build -d
 - 还需要放行 Windows 防火墙的 `8081` 端口；如果要让别人直连接口，再放行 `9001`
 - 如果本机能打开 `http://localhost:8081/`，但同学打不开 `http://你的校园网IPv4:8081/`，通常是防火墙或校园网终端隔离导致
 
-如果你在本机使用 Jenkins 触发 Docker 发布，构建成功后可直接执行：
+如果你在本机使用 Jenkins 触发 Docker 发布，推荐先跑 JUnit 5 测试，再执行 Docker 发布：
 
 ```bat
 cd /d D:\clouddemo\cloud-demo
+mvn -B test
 docker compose up -d --build
 ```
 
@@ -155,8 +156,15 @@ docker compose up -d --build
 
 ```bat
 cd /d D:\clouddemo\cloud-demo
+mvn -B test
 docker compose down
 docker compose up -d --build
+```
+
+如果你在 Jenkins 里配置测试报告收集，JUnit 报告路径可填写：
+
+```text
+**/target/surefire-reports/*.xml
 ```
 
 如果你想单独构建某个微服务镜像，也可以直接使用它自己的 Dockerfile，例如：

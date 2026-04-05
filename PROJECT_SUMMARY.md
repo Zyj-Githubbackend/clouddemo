@@ -41,7 +41,7 @@
 - 活动支持多图上传、编辑和详情轮播展示
 - 用户可在“我的志愿足迹”页面导出本人已核销志愿时长及活动列表 Excel
 - Docker 前端映射已调整为 `8081:80`
-- 本机 Jenkins 可通过 `Execute Windows batch command` 直接触发 `docker compose up -d --build`
+- 本机 Jenkins 可通过 `Execute Windows batch command` 先执行 `mvn -B test`，再触发 `docker compose up -d --build`
 
 ## 关键配置对齐
 

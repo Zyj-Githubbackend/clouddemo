@@ -217,12 +217,19 @@ docker compose up --build -d
 - Windows 防火墙至少需要放行 `8081` 端口
 - 如果你本机能访问 `http://localhost:8081/`，别人却打不开 `http://你的校园网IPv4:8081/`，一般是防火墙或校园网隔离问题
 
-如果你本机已经装了 Jenkins，也可以把下面这段放到 `Execute Windows batch command` 中，让 Jenkins 在构建成功后自动发布：
+如果你本机已经装了 Jenkins，也可以把下面这段放到 `Execute Windows batch command` 中，让 Jenkins 先跑测试再自动发布：
 
 ```bat
 cd /d D:\clouddemo\cloud-demo
+mvn -B test
 docker compose up -d --build
 docker compose ps
+```
+
+如果你还要在 Jenkins 页面展示测试结果，JUnit 报告路径填写：
+
+```text
+**/target/surefire-reports/*.xml
 ```
 
 如果命令提示无法连接 Docker Engine，请先启动 Docker Desktop。

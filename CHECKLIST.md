@@ -33,7 +33,9 @@
 - [ ] `http://localhost:9101/actuator/health` 返回 `UP`
 - [ ] `http://localhost:8849/nacos/` 可访问
 - [ ] Docker 页面和接口返回的中文未出现乱码
+- [ ] 如果使用 Jenkins，本机构建任务可成功执行 `mvn -B test`
 - [ ] 如果使用 Jenkins，本机构建任务可成功执行 `docker compose up -d --build`
+- [ ] 如果使用 Jenkins，JUnit 报告可被 `**/target/surefire-reports/*.xml` 正确收集
 
 ## 页面访问
 

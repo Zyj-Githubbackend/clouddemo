@@ -230,7 +230,7 @@ docker compose up --build -d
 
 ## 三、本机 Jenkins 自动发布
 
-如果 Jenkins 就安装在当前这台 Windows 机器上，最简单的方式是让 Jenkins 在现有构建步骤之后，再执行一次 Docker Compose。
+如果 Jenkins 就安装在当前这台 Windows 机器上，最简单的方式是让 Jenkins 在现有构建步骤之后，先执行一次 Maven 测试，再执行 Docker Compose。
 
 Jenkins 自由风格项目推荐使用：
 
@@ -240,6 +240,7 @@ Jenkins 自由风格项目推荐使用：
 
 ```bat
 cd /d D:\clouddemo\cloud-demo
+mvn -B test
 docker compose up -d --build
 docker compose ps
 ```
@@ -248,6 +249,7 @@ docker compose ps
 
 ```bat
 cd /d D:\clouddemo\cloud-demo
+mvn -B test
 docker compose down
 docker compose up -d --build
 docker compose ps
@@ -256,9 +258,15 @@ docker compose ps
 说明：
 
 - 这种方式适合 Jenkins 与 Docker Desktop 都在本机的场景
+- `mvn -B test` 会执行当前仓库已经接入的 JUnit 5 测试，测试失败时 Jenkins 应停止后续部署
 - `up -d --build` 会保留已有数据卷，不会自动修改数据库表结构
 - 日常发布一般不建议直接使用 `docker compose down -v`，除非你明确要清空 MySQL 和 MinIO 数据
 - 如果 Jenkins 控制台里 Docker 已执行成功，但后续还有“自动创建 PR”之类的步骤报错，任务仍可能被 Jenkins 标红，此时需要单独调整 Jenkins 后续步骤
+
+测试报告建议：
+
+- Jenkins 构建后操作可使用 `Publish JUnit test result report`
+- 报告路径填写 `**/target/surefire-reports/*.xml`
 
 ## 四、监控后台说明
 
