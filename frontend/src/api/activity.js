@@ -75,6 +75,13 @@ export const registerActivity = (activityId) => {
   })
 }
 
+export const cancelMyRegistration = (activityId) => {
+  return request({
+    url: `/activity/cancelRegistration/${activityId}`,
+    method: 'post'
+  })
+}
+
 // 我的报名记录
 export const getMyRegistrations = () => {
   return request({

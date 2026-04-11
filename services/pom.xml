@@ -15,6 +15,7 @@
         <module>user-service</module>
         <module>activity-service</module>
         <module>monitor-service</module>
+        <module>mcp-service</module>
     </modules>
     <artifactId>services</artifactId>
 

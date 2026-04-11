@@ -1,4 +1,4 @@
-<template>
+﻿<template>
   <Layout>
     <div class="my-page page-container">
       <section class="my-hero">
@@ -84,6 +84,20 @@
                 </el-tag>
               </template>
             </el-table-column>
+            <el-table-column label="操作" width="120" align="center">
+              <template #default="{ row }">
+                <el-button
+                  v-if="canCancel(row)"
+                  type="danger"
+                  link
+                  :loading="cancellingActivityId === row.activityId"
+                  @click="handleCancel(row)"
+                >
+                  取消报名
+                </el-button>
+                <span v-else class="action-placeholder">--</span>
+              </template>
+            </el-table-column>
           </el-table>
         </div>
 
@@ -98,15 +112,16 @@
 
 <script setup>
 import { computed, onMounted, ref } from 'vue'
-import { ElMessage } from 'element-plus'
+import { ElMessage, ElMessageBox } from 'element-plus'
 import dayjs from 'dayjs'
 import Layout from '@/components/Layout.vue'
-import { exportConfirmedMyRegistrations, getMyRegistrations } from '@/api/activity'
+import { cancelMyRegistration, exportConfirmedMyRegistrations, getMyRegistrations } from '@/api/activity'
 import { useUserStore } from '@/store/user'
 
 const userStore = useUserStore()
 const loading = ref(false)
 const exporting = ref(false)
+const cancellingActivityId = ref(null)
 const showConfirmedOnly = ref(false)
 const registrations = ref([])
 
@@ -136,6 +151,13 @@ const formatShortDate = (date) => {
 const formatFullDate = (date) => {
   if (!date) return '--'
   return dayjs(date).format('YYYY-MM-DD HH:mm')
+}
+
+const canCancel = (row) => {
+  if (!row || row.status !== 'REGISTERED') return false
+  if (row.checkInStatus === 1 || row.hoursConfirmed === 1) return false
+  if (!row.startTime) return false
+  return dayjs().isBefore(dayjs(row.startTime))
 }
 
 const sanitizeFilenamePart = (value) => {
@@ -186,14 +208,34 @@ const fetchData = async () => {
     const regRes = await getMyRegistrations()
     const data = regRes.data || []
     registrations.value = data.sort((a, b) => {
-      const timeA = new Date(a.startTime).getTime()
-      const timeB = new Date(b.startTime).getTime()
+      const timeA = new Date(a.startTime || 0).getTime()
+      const timeB = new Date(b.startTime || 0).getTime()
       return timeB - timeA
     })
   } catch (error) {
     console.error('获取数据失败:', error)
   } finally {
     loading.value = false
+  }
+}
+
+const handleCancel = async (row) => {
+  try {
+    await ElMessageBox.confirm(`确认取消《${row.activityTitle}》的报名吗？`, '确认取消报名', {
+      type: 'warning',
+      confirmButtonText: '确定',
+      cancelButtonText: '再想想'
+    })
+    cancellingActivityId.value = row.activityId
+    await cancelMyRegistration(row.activityId)
+    ElMessage.success('已取消报名')
+    await fetchData()
+  } catch (error) {
+    if (error !== 'cancel' && error !== 'close') {
+      console.error('取消报名失败:', error)
+    }
+  } finally {
+    cancellingActivityId.value = null
   }
 }
 
@@ -347,6 +389,10 @@ onMounted(() => {
   background: rgba(13, 71, 217, 0.12);
   color: var(--cv-primary);
   font-weight: 700;
+}
+
+.action-placeholder {
+  color: #a0a5b9;
 }
 
 @media (max-width: 768px) {

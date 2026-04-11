@@ -1,4 +1,4 @@
-<template>
+﻿<template>
   <Layout>
     <div class="detail-page page-container" v-loading="loading">
       <template v-if="activity.id">
@@ -66,7 +66,7 @@
                 <strong>{{ activity.currentParticipants }}</strong> / {{ activity.maxParticipants }}
               </div>
               <el-progress
-                :percentage="Math.min(Math.round((activity.currentParticipants / activity.maxParticipants) * 100), 100)"
+                :percentage="slotsPercentage"
                 :color="slotsProgressColor"
                 :stroke-width="8"
               />
@@ -86,7 +86,17 @@
                   <el-icon :size="28" color="#67c23a"><CircleCheck /></el-icon>
                   <span>您已成功报名</span>
                 </div>
-                <p class="hint">请关注活动时间，准时签到。</p>
+                <el-button
+                  v-if="canCancelRegistration"
+                  class="action-btn secondary-btn"
+                  :loading="cancelling"
+                  @click="handleCancelRegistration"
+                >
+                  取消报名
+                </el-button>
+                <p class="hint">
+                  {{ canCancelRegistration ? '如果行程变动，可在活动开始前取消报名。' : '请关注活动时间，准时签到。' }}
+                </p>
               </template>
               <template v-else>
                 <div class="state-mute">
@@ -110,27 +120,30 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted } from 'vue'
+import { computed, onMounted, ref } from 'vue'
 import { useRoute } from 'vue-router'
-import { ElMessage } from 'element-plus'
+import { ElMessage, ElMessageBox } from 'element-plus'
+import dayjs from 'dayjs'
 import Layout from '@/components/Layout.vue'
-import { getActivityDetail, registerActivity } from '@/api/activity'
+import { cancelMyRegistration, getActivityDetail, registerActivity } from '@/api/activity'
 import { getRecruitmentDisplay } from '@/utils/recruitment'
 import { getActivityPhaseDisplay } from '@/utils/activityPhase'
-import dayjs from 'dayjs'
 
 const route = useRoute()
 const loading = ref(false)
+const cancelling = ref(false)
 const activity = ref({})
 
 const activityPhaseDisplay = computed(() => getActivityPhaseDisplay(activity.value))
 const recruitmentDisplay = computed(() => getRecruitmentDisplay(activity.value))
+
 const galleryImages = computed(() => {
   if (Array.isArray(activity.value.imageUrls) && activity.value.imageUrls.length > 0) {
     return activity.value.imageUrls
   }
   return activity.value.imageUrl ? [activity.value.imageUrl] : []
 })
+
 const hasGalleryImages = computed(() => galleryImages.value.length > 0)
 
 const canRegister = computed(() => {
@@ -138,19 +151,33 @@ const canRegister = computed(() => {
   return !a.isRegistered && a.status === 'RECRUITING' && recruitmentDisplay.value.text === '招募中'
 })
 
+const canCancelRegistration = computed(() => {
+  const a = activity.value
+  if (!a.isRegistered) return false
+  if (a.status !== 'RECRUITING') return false
+  if (!a.startTime) return false
+  return dayjs().isBefore(dayjs(a.startTime))
+})
+
 const statusHint = computed(() => {
   const a = activity.value
   if (a.status === 'CANCELLED') return '活动已取消'
-  if (a.status === 'COMPLETED') return '活动已结项'
+  if (a.status === 'COMPLETED') return '活动已结束'
   if (recruitmentDisplay.value.text === '未开始') return '招募尚未开始'
   if (recruitmentDisplay.value.text === '已结束') return '招募已结束'
   return '活动暂不可报名'
 })
 
+const slotsPercentage = computed(() => {
+  const max = Number(activity.value.maxParticipants || 0)
+  const current = Number(activity.value.currentParticipants || 0)
+  if (max <= 0) return 0
+  return Math.min(Math.round((current / max) * 100), 100)
+})
+
 const slotsProgressColor = computed(() => {
-  const pct = (activity.value.currentParticipants / activity.value.maxParticipants) * 100
-  if (pct >= 90) return '#f56c6c'
-  if (pct >= 60) return '#e6a23c'
+  if (slotsPercentage.value >= 90) return '#f56c6c'
+  if (slotsPercentage.value >= 60) return '#e6a23c'
   return '#67c23a'
 })
 
@@ -175,13 +202,39 @@ const handleRegister = async () => {
   try {
     await registerActivity(route.params.id)
     ElMessage.success('报名成功')
-    fetchActivity()
+    await fetchActivity()
   } catch (error) {
     console.error('报名失败:', error)
   }
 }
 
-onMounted(() => { fetchActivity() })
+const handleCancelRegistration = async () => {
+  try {
+    await ElMessageBox.confirm(
+      '取消报名后，你将从该活动的报名名单中移除。是否继续？',
+      '确认取消报名',
+      {
+        type: 'warning',
+        confirmButtonText: '确定',
+        cancelButtonText: '再想想'
+      }
+    )
+    cancelling.value = true
+    await cancelMyRegistration(route.params.id)
+    ElMessage.success('已取消报名')
+    await fetchActivity()
+  } catch (error) {
+    if (error !== 'cancel' && error !== 'close') {
+      console.error('取消报名失败:', error)
+    }
+  } finally {
+    cancelling.value = false
+  }
+}
+
+onMounted(() => {
+  fetchActivity()
+})
 </script>
 
 <style scoped>
@@ -345,6 +398,10 @@ onMounted(() => { fetchActivity() })
   font-weight: 600;
 }
 
+.secondary-btn {
+  margin-top: 12px;
+}
+
 .hint {
   margin-top: 10px;
   font-size: 12px;
@@ -391,7 +448,3 @@ onMounted(() => { fetchActivity() })
   }
 }
 </style>
-
-
-
-

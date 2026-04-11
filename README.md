@@ -1,70 +1,63 @@
 ﻿# 校园志愿服务管理平台
 
-基于 Spring Boot 3、Spring Cloud Alibaba、Vue 3 和 Nginx 的校园志愿服务管理平台。
+基于 Spring Boot 3、Spring Cloud Alibaba、Vue 3、Nginx 与 MySQL 的校园志愿服务管理平台，支持志愿活动发布、报名、签到、时长核销、活动图片管理、个人志愿足迹导出，以及通过独立 `mcp-service` 对外暴露 MCP 能力。
 
-## 项目概览
+## 1. 项目概览
 
 - 前端：Vue 3 + Vite + Element Plus
 - 网关：`gateway-service`，端口 `9000`
 - 用户服务：`user-service`，端口 `8100`
 - 活动服务：`activity-service`，端口 `8200`
 - 监控服务：`monitor-service`，端口 `9100`
+- MCP 服务：`mcp-service`，端口 `9300`
 - 注册中心：Nacos，端口 `8848`
 - 数据库：MySQL，库名 `volunteer_platform`
 - 缓存：Redis
+- 图片存储：MinIO
 
-## 近期更新
+当前版本的重点能力：
 
-- 活动支持上传多张图片，后台创建和编辑活动时可维护图片列表，详情页可轮播展示
-- 用户可在“我的志愿足迹”页面导出本人已核销志愿时长及对应活动明细 Excel
-- Docker 版前端默认访问地址已调整为 `http://localhost:8081/`
-- 本机 Jenkins 任务可先执行 `mvn -B test`，再调用 `docker compose up -d --build` 完成 Docker 发布
+- 活动支持多图上传、编辑和详情轮播展示
+- 用户可在“我的志愿足迹”页面取消未开始活动的报名
+- 用户可导出本人已核销志愿时长及对应活动明细 Excel
+- 管理员可进行活动创建、编辑、取消、结项、签到、时长核销
+- 新增独立 `mcp-service`，支持 OAuth 授权码登录与 Streamable HTTP MCP 接入
 
-当前仓库已经补充了本机 Nginx 配置，推荐在本机通过 Nginx 统一访问：
+## 2. 仓库结构
 
-- 前台：`http://localhost/`
-- 监控后台：`http://localhost/monitor/`
-- 开发模式前端：`http://localhost:3000`
+源码与文档主要分布如下：
 
-## 当前 Nginx 约定
+- `services/`：后端 Maven 聚合工程
+- `frontend/`：Vue 3 前端工程
+- `database/init.sql`：数据库初始化与示例数据
+- `deploy/nginx/cloud-demo.local.conf`：本机 Nginx 配置
+- `docker-compose.yml`：整套容器部署方案
+- `docs/`：分主题文档中心
+- `scripts/mcp-login.ps1`：MCP 手动 token 登录辅助脚本
 
-仓库中的本机配置文件位于 [deploy/nginx/cloud-demo.local.conf](deploy/nginx/cloud-demo.local.conf)。
+另外，仓库根目录下的 `user-service/`、`activity-service/`、`gateway-service/`、`monitor-service/` 目录当前用于保存运行日志，不是源码目录。
 
-它约定了以下转发规则：
+## 3. 本机运行摘要
 
-- `/`：前端静态文件 `frontend/dist`
-- `/api/`：转发到 `http://127.0.0.1:9000/`
-- `/monitor/`：转发到 `http://127.0.0.1:9100/`
-
-为兼容 `/monitor/` 反向代理，`monitor-service` 已增加：
-
-- `server.address=0.0.0.0`
-- `server.forward-headers-strategy=framework`
-
-## 本机启动摘要
-
-1. 初始化数据库
+### 3.1 初始化数据库
 
 ```bash
 mysql -u root -p < database/init.sql
 ```
 
-2. 启动 Redis 和 Nacos
+注意：
 
-3. 编译后端
+- `database/init.sql` 会先执行 `DROP DATABASE IF EXISTS volunteer_platform`
+- 脚本会初始化默认账号、20 条活动数据以及报名记录
+- 种子数据围绕 `2026-03-25` 设计，因此不同日期运行时，活动“招募中/未开始/已结束/进行中”的展示会随当前时间动态变化
 
-```bash
-mvn clean install -DskipTests
-```
+### 3.2 启动基础设施
 
-4. 启动后端服务
+- Redis
+- Nacos
+- MinIO
 
-- `UserApplication`
-- `ActivityApplication`
-- `GatewayApplication`
-- `MonitorApplication`
-
-活动图片上传默认已经内置了这组 MinIO 配置，所以你本机直接启动 `ActivityApplication` 就能连到当前 MinIO：
+`activity-service` 默认使用以下 MinIO 配置，本机不改端口时通常无需额外配置：
 
 ```powershell
 $env:MINIO_ENDPOINT="http://127.0.0.1:9005"
@@ -73,138 +66,127 @@ $env:MINIO_SECRET_KEY="12345678"
 $env:MINIO_BUCKET="activity-images"
 ```
 
-如果你不设置环境变量，`activity-service` 会默认使用上面这组值。
+### 3.3 编译并启动后端
 
-如果数据库已经初始化过，请按实际情况执行以下其一：
-
-1. 旧库还没有 `image_key` 字段：
-
-```sql
-ALTER TABLE vol_activity ADD COLUMN image_key TEXT COMMENT '活动图片对象键列表，逗号分隔';
+```bash
+mvn clean install -DskipTests
 ```
 
-2. 字段已存在，但还是旧的 `VARCHAR(255)`：
+启动顺序建议：
 
-```sql
-ALTER TABLE vol_activity
-MODIFY COLUMN image_key TEXT COMMENT '活动图片对象键列表，逗号分隔';
+1. `UserApplication`
+2. `ActivityApplication`
+3. `GatewayApplication`
+4. `MonitorApplication`
+5. `McpApplication`
+
+### 3.4 启动前端
+
+开发模式：
+
+```bash
+cd frontend
+npm install
+npm run dev
 ```
 
-5. 前端二选一
+生产构建：
 
-- 开发模式：`cd frontend && npm install && npm run dev`
-- Nginx 模式：`cd frontend && npm run build`，然后启动 Nginx
+```bash
+cd frontend
+npm install
+npm run build
+```
 
-## Docker 部署
+## 4. 访问地址
 
-仓库已经补充了以下 Docker 文件：
+### 4.1 本机 Nginx 模式
 
-- [docker-compose.yml](docker-compose.yml)
-- [services/user-service/Dockerfile](services/user-service/Dockerfile)
-- [services/activity-service/Dockerfile](services/activity-service/Dockerfile)
-- [services/gateway-service/Dockerfile](services/gateway-service/Dockerfile)
-- [services/monitor-service/Dockerfile](services/monitor-service/Dockerfile)
-- [frontend/Dockerfile](frontend/Dockerfile)
-- [frontend/nginx.docker.conf](frontend/nginx.docker.conf)
+- 前台：`http://localhost/`
+- 监控后台：`http://localhost/monitor/`
+- MCP：`http://localhost/mcp`
+- 开发模式前端：`http://localhost:3000`
+
+Nginx 路由约定：
+
+- `/` -> `frontend/dist`
+- `/api/` -> `http://127.0.0.1:9000/`
+- `/monitor/` -> `http://127.0.0.1:9100/`
+- `/.well-known/*`、`/authorize`、`/token`、`/register`、`/mcp*` -> `http://127.0.0.1:9300`
+
+### 4.2 Docker Compose 模式
 
 启动命令：
 
 ```bash
-docker compose up --build -d
+docker compose up -d --build
 ```
 
 默认访问地址：
 
 - 前台：`http://localhost:8081/`
 - 监控后台：`http://localhost:8081/monitor/`
+- MCP：`http://localhost:8081/mcp`
 - 网关直连：`http://localhost:9001`
 - 监控直连：`http://localhost:9101`
 - Nacos：`http://localhost:8849/nacos`
 - MinIO API：`http://localhost:9007`
 - MinIO 控制台：`http://localhost:9008`
 
-同校园网访问：
+## 5. MCP 接入摘要
 
-- 前台：`http://你的校园网IPv4:8081/`
-- 监控后台：`http://你的校园网IPv4:8081/monitor/`
-- 如果需要直连网关：`http://你的校园网IPv4:9001`
+`services/mcp-service` 提供独立 MCP Server，协议为 Streamable HTTP。
 
-说明：
+推荐连接方式：
 
-- Docker 版前端默认映射到 `8081`，避免和你本机已安装的 Nginx `80` 端口冲突
-- Docker 版同时将 Nacos、网关、监控映射到 `8849`、`9001`、`9101`，避免和本机进程常用端口冲突
-- Docker 版已内置 MinIO 容器，宿主机映射为 `9007` 和 `9008`
-- 如果你希望 Docker 前端直接占用 `80`，可以把 `docker-compose.yml` 里的 `8081:80` 改成 `80:80`
-- `database/init.sql` 顶部已显式设置 `SET NAMES utf8mb4;`，用于避免 Docker 初始化 MySQL 时中文按错误字符集导入
-- Docker 模式下 `activity-service` 默认连接 Compose 内部地址 `http://minio:9000`
-- MinIO 默认账号密码为 `root / 12345678`
-- 若你改了端口或凭证，再在启动前覆盖 `MINIO_ENDPOINT`、`MINIO_ACCESS_KEY`、`MINIO_SECRET_KEY`
-- 如果你想把覆盖值长期保存，建议在仓库根目录参考 `.env.example` 新建 `.env`
-- 同校园网访问前，先用 `ipconfig` 确认当前校园网 IPv4 地址
-- 还需要放行 Windows 防火墙的 `8081` 端口；如果要让别人直连接口，再放行 `9001`
-- 如果本机能打开 `http://localhost:8081/`，但同学打不开 `http://你的校园网IPv4:8081/`，通常是防火墙或校园网终端隔离导致
-
-如果你在本机使用 Jenkins 触发 Docker 发布，推荐先跑 JUnit 5 测试，再执行 Docker 发布：
-
-```bat
-cd /d D:\clouddemo\cloud-demo
-mvn -B test
-docker compose up -d --build
+```powershell
+codex mcp add cloud-demo --url http://localhost/mcp
+codex mcp login cloud-demo
 ```
 
-如果你希望每次发版前先完整停掉旧容器，也可以改为：
+Docker 模式下把地址换成：
 
-```bat
-cd /d D:\clouddemo\cloud-demo
-mvn -B test
-docker compose down
-docker compose up -d --build
+```powershell
+codex mcp add cloud-demo --url http://localhost:8081/mcp
+codex mcp login cloud-demo
 ```
 
-如果你在 Jenkins 里配置测试报告收集，JUnit 报告路径可填写：
+当前文档已覆盖：
 
-```text
-**/target/surefire-reports/*.xml
-```
+- OAuth 元数据验证
+- `codex mcp add` / `codex mcp login`
+- 手动 token 备用方案
+- 用户工具与管理员工具清单
 
-如果你想单独构建某个微服务镜像，也可以直接使用它自己的 Dockerfile，例如：
+详见 [docs/mcp/MCP_CONNECTION.md](docs/mcp/MCP_CONNECTION.md)。
 
-```bash
-docker build -f services/activity-service/Dockerfile -t cloud-demo/activity-service:latest .
-docker build -f services/user-service/Dockerfile -t cloud-demo/user-service:latest .
-docker build -f services/gateway-service/Dockerfile -t cloud-demo/gateway-service:latest .
-docker build -f services/monitor-service/Dockerfile -t cloud-demo/monitor-service:latest .
-```
+## 6. 默认测试账号
 
-如果你曾在旧配置下启动过 Docker，数据库卷里可能已经保留了乱码数据。此时需要重建数据卷：
-
-```bash
-docker compose down -v
-docker compose up --build -d
-```
-
-## 默认测试账号
-
-`database/init.sql` 内置了以下账号，密码均为 `password123`：
+`database/init.sql` 内置以下账号，密码均为 `password123`：
 
 | 角色 | 用户名 | 说明 |
 |------|------|------|
 | 管理员 | `admin` | 可发布活动、签到、核销时长、查看统计 |
 | 志愿者 | `student01` - `student10` | 用于普通用户流程测试 |
 
-## 文档导航
+## 7. 文档导航
 
-- [快速开始](QUICKSTART.md)
-- [部署说明](DEPLOY.md)
-- [架构说明](ARCHITECTURE.md)
-- [API 测试](API_TEST.md)
-- [目录结构](DIRECTORY_STRUCTURE.md)
-- [交付摘要](PROJECT_SUMMARY.md)
-- [验收清单](CHECKLIST.md)
+- [文档中心](docs/README.md)
+- [快速开始](docs/setup/QUICKSTART.md)
+- [部署说明](docs/deploy/DEPLOY.md)
+- [架构说明](docs/architecture/ARCHITECTURE.md)
+- [API 测试](docs/testing/API_TEST.md)
+- [MCP 连接说明](docs/mcp/MCP_CONNECTION.md)
+- [目录结构](docs/overview/DIRECTORY_STRUCTURE.md)
+- [项目交付摘要](docs/overview/PROJECT_SUMMARY.md)
+- [验收清单](docs/setup/CHECKLIST.md)
+- [前端快速启动](docs/frontend/QUICKSTART.md)
+- [前端交付摘要](docs/frontend/PROJECT_COMPLETE.md)
 
-## 目录提示
+## 8. 推荐阅读顺序
 
-- 后端代码：`services/`
-- 前端代码：`frontend/`
-- 数据库脚本：`database/init.sql`
-- Nginx 配置：`deploy/nginx/`
+1. `README.md`
+2. [docs/setup/QUICKSTART.md](docs/setup/QUICKSTART.md)
+3. [docs/deploy/DEPLOY.md](docs/deploy/DEPLOY.md)
+4. [docs/testing/API_TEST.md](docs/testing/API_TEST.md)
+5. [docs/mcp/MCP_CONNECTION.md](docs/mcp/MCP_CONNECTION.md)

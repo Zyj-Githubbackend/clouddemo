@@ -151,6 +151,23 @@ services:
     networks:
       - cloud-demo
 
+  mcp-service:
+    build:
+      context: .
+      dockerfile: services/mcp-service/Dockerfile
+    container_name: cloud-demo-mcp-service
+    restart: unless-stopped
+    depends_on:
+      - gateway-service
+    environment:
+      TZ: Asia/Shanghai
+      JAVA_TOOL_OPTIONS: -Duser.timezone=Asia/Shanghai
+      CLOUD_DEMO_API_BASE_URL: http://gateway-service:9000
+      MONITOR_SERVICE_URL: http://monitor-service:9100
+      MCP_SERVICE_BASE_URL: http://mcp-service:9300
+    networks:
+      - cloud-demo
+
   frontend:
     build:
       context: .
@@ -160,6 +177,7 @@ services:
     depends_on:
       - gateway-service
       - monitor-service
+      - mcp-service
     ports:
       - "8081:80"
     networks:

@@ -24,11 +24,14 @@ frontend/
 │  ├─ utils/
 │  └─ views/
 ├─ index.html
+├─ nginx.docker.conf
 ├─ package.json
 └─ vite.config.js
 ```
 
-## 开发模式
+## 运行方式
+
+### 开发模式
 
 ```bash
 cd frontend
@@ -36,11 +39,13 @@ npm install
 npm run dev
 ```
 
-访问：`http://localhost:3000`
+访问：
+
+- `http://localhost:3000`
 
 开发模式下，Vite 会把 `/api` 代理到 `http://localhost:9000`。
 
-## 生产构建
+### 生产构建
 
 ```bash
 cd frontend
@@ -49,45 +54,57 @@ npm run build
 
 构建结果输出到 `frontend/dist`。
 
+## 路由范围
+
+用户侧：
+
+- `/login`
+- `/register`
+- `/home`
+- `/activities`
+- `/activity/:id`
+- `/my`
+- `/profile`
+
+管理员侧：
+
+- `/admin/activities`
+- `/admin/create`
+- `/admin/checkin`
+- `/admin/confirm`
+- `/admin/hours`
+
+## 与后端的接口约定
+
+- 用户接口：`/api/user/*`
+- 活动接口：`/api/activity/*`
+- 图片读取：`/api/activity/image?objectKey=...`
+- 请求实例定义在 `src/utils/request.js`
+
+## 已对齐的业务能力
+
+- 登录、注册、资料维护
+- 活动列表筛选与详情展示
+- 报名活动与取消报名
+- 志愿足迹记录展示
+- 已核销记录 Excel 导出
+- 管理端活动管理
+- 多图上传与详情轮播展示
+- 管理端签到、核销、时长统计
+
 ## 与 Nginx 的关系
 
-当前仓库本机部署的访问方式是：
+当前仓库本机部署的推荐访问方式：
 
 - `/`：前端页面
 - `/api/`：转发到网关
 - `/monitor/`：转发到监控后台
+- `/mcp*` 与 OAuth 元数据：转发到 `mcp-service`
 
-相关配置见 [../deploy/nginx/cloud-demo.local.conf](../deploy/nginx/cloud-demo.local.conf)。
+相关配置：
 
-## 主要页面
-
-- `Login.vue`
-- `Register.vue`
-- `Home.vue`
-- `ActivityList.vue`
-- `ActivityDetail.vue`
-- `MyCenter.vue`
-- `views/admin/*`
-
-## 关键文件
-
-- `src/utils/request.js`：统一请求实例，`baseURL` 为 `/api`
-- `src/router/index.js`：路由和鉴权守卫
-- `src/api/user.js`：用户接口
-- `src/api/activity.js`：活动接口
-
-## 活动图片说明
-
-- 管理端创建活动和编辑活动时，支持上传活动图片
-- 图片上传接口走 `/api/activity/admin/image`
-- 图片展示接口走 `/api/activity/image?objectKey=...`
-- 首页、活动列表、活动详情页都会展示活动相关图片
-
-这意味着：
-
-- 开发模式下需要保留 Vite 的 `/api` 代理
-- 部署模式下需要保留 Nginx 的 `/api/` 反向代理
-- 前端本身不直接访问 MinIO，而是统一通过后端读取图片
+- [../deploy/nginx/cloud-demo.local.conf](../deploy/nginx/cloud-demo.local.conf)
+- [nginx.docker.conf](nginx.docker.conf)
 
 ## 常见问题
 
@@ -100,4 +117,4 @@ npm run build
 
 ### 刷新页面 404
 
-部署模式下必须通过 Nginx 的 `try_files ... /index.html` 支持 Vue Router history 模式。
+部署模式下必须通过带有 `try_files ... /index.html` 的 Nginx 配置访问。

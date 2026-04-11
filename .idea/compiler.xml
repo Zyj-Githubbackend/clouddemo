@@ -7,11 +7,12 @@
         <sourceOutputDir name="target/generated-sources/annotations" />
         <sourceTestOutputDir name="target/generated-test-sources/test-annotations" />
         <outputRelativeToContentRoot value="true" />
+        <module name="monitor-service" />
+        <module name="mcp-service" />
         <module name="activity-service" />
+        <module name="user-service" />
         <module name="common" />
         <module name="gateway-service" />
-        <module name="monitor-service" />
-        <module name="user-service" />
       </profile>
     </annotationProcessing>
     <bytecodeTargetLevel>
@@ -26,6 +27,7 @@
       <module name="cloud-demo" options="" />
       <module name="common" options="-parameters" />
       <module name="gateway-service" options="-parameters" />
+      <module name="mcp-service" options="-parameters" />
       <module name="monitor-service" options="-parameters" />
       <module name="service-order" options="-parameters" />
       <module name="service-product" options="-parameters" />

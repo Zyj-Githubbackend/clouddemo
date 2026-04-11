@@ -4,6 +4,7 @@ import org.apache.poi.ss.usermodel.Sheet;
 import org.apache.poi.xssf.usermodel.XSSFWorkbook;
 import org.example.dto.ActivityCreateRequest;
 import org.example.entity.Activity;
+import org.example.entity.Registration;
 import org.example.feign.UserServiceClient;
 import org.example.mapper.ActivityMapper;
 import org.example.mapper.RegistrationMapper;
@@ -25,8 +26,10 @@ import java.util.concurrent.TimeUnit;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.doAnswer;
+import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -130,5 +133,55 @@ class ActivityServiceTest {
             assertEquals("图书整理", sheet.getRow(6).getCell(0).getStringCellValue());
             assertEquals("校园引导", sheet.getRow(7).getCell(0).getStringCellValue());
         }
+    }
+
+    @Test
+    void cancelMyRegistrationShouldMarkRegistrationCancelledAndRestoreStock() {
+        Activity activity = new Activity();
+        activity.setId(9L);
+        activity.setStatus("RECRUITING");
+        activity.setStartTime(LocalDateTime.now().plusDays(1));
+
+        Registration registration = new Registration();
+        registration.setId(12L);
+        registration.setActivityId(9L);
+        registration.setUserId(5L);
+        registration.setStatus("REGISTERED");
+        registration.setCheckInStatus(0);
+        registration.setHoursConfirmed(0);
+
+        when(activityMapper.selectById(9L)).thenReturn(activity);
+        when(registrationMapper.selectOne(any())).thenReturn(registration);
+        when(redisTemplate.opsForValue()).thenReturn(valueOperations);
+
+        activityService.cancelMyRegistration(9L, 5L);
+
+        assertEquals("CANCELLED", registration.getStatus());
+        verify(registrationMapper).updateById(registration);
+        verify(activityMapper).decrementParticipants(9L);
+        verify(valueOperations).increment("activity:stock:9");
+    }
+
+    @Test
+    void cancelMyRegistrationShouldRejectCheckedInRegistration() {
+        Activity activity = new Activity();
+        activity.setId(9L);
+        activity.setStatus("RECRUITING");
+        activity.setStartTime(LocalDateTime.now().plusDays(1));
+
+        Registration registration = new Registration();
+        registration.setId(12L);
+        registration.setActivityId(9L);
+        registration.setUserId(5L);
+        registration.setStatus("REGISTERED");
+        registration.setCheckInStatus(1);
+        registration.setHoursConfirmed(0);
+
+        when(activityMapper.selectById(9L)).thenReturn(activity);
+        when(registrationMapper.selectOne(any())).thenReturn(registration);
+
+        assertThrows(org.example.common.exception.BusinessException.class,
+                () -> activityService.cancelMyRegistration(9L, 5L));
+        verify(registrationMapper, never()).updateById(any(Registration.class));
     }
 }

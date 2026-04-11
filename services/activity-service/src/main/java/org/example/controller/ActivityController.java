@@ -110,6 +110,15 @@ public class ActivityController {
         activityService.registerActivity(activityId, userId);
         return Result.success();
     }
+
+    @PostMapping("/cancelRegistration/{activityId}")
+    public Result<Void> cancelMyRegistration(
+            @PathVariable Long activityId,
+            @RequestHeader("X-User-Id") Long userId) {
+
+        activityService.cancelMyRegistration(activityId, userId);
+        return Result.success();
+    }
     
     @GetMapping("/myRegistrations")
     public Result<List<RegistrationVO>> getMyRegistrations(

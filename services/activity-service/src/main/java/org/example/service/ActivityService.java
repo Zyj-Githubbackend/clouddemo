@@ -290,6 +290,47 @@ public class ActivityService {
                 activityId, userId, registration.getId(), stock);
     }
 
+    @Transactional(rollbackFor = Exception.class)
+    public void cancelMyRegistration(Long activityId, Long userId) {
+        Activity activity = activityMapper.selectById(activityId);
+        if (activity == null) {
+            throw new BusinessException("Activity not found");
+        }
+        if ("CANCELLED".equals(activity.getStatus())) {
+            throw new BusinessException("Activity has already been cancelled");
+        }
+        if ("COMPLETED".equals(activity.getStatus())) {
+            throw new BusinessException("Completed activities cannot be cancelled by users");
+        }
+        if (activity.getStartTime() != null && !LocalDateTime.now().isBefore(activity.getStartTime())) {
+            throw new BusinessException("Registrations cannot be cancelled after the activity starts");
+        }
+
+        LambdaQueryWrapper<Registration> wrapper = new LambdaQueryWrapper<>();
+        wrapper.eq(Registration::getUserId, userId)
+                .eq(Registration::getActivityId, activityId)
+                .eq(Registration::getStatus, "REGISTERED")
+                .orderByDesc(Registration::getCreateTime)
+                .last("LIMIT 1");
+        Registration registration = registrationMapper.selectOne(wrapper);
+        if (registration == null) {
+            throw new BusinessException("No active registration found for this activity");
+        }
+        if (registration.getCheckInStatus() != null && registration.getCheckInStatus() == 1) {
+            throw new BusinessException("Checked-in registrations cannot be cancelled");
+        }
+        if (registration.getHoursConfirmed() != null && registration.getHoursConfirmed() == 1) {
+            throw new BusinessException("Confirmed registrations cannot be cancelled");
+        }
+
+        registration.setStatus("CANCELLED");
+        registrationMapper.updateById(registration);
+        activityMapper.decrementParticipants(activityId);
+        redisTemplate.opsForValue().increment(RedisKeyConstant.getActivityStockKey(activityId));
+        log.info("cancelled registration activityId={} userId={} registrationId={}",
+                activityId, userId, registration.getId());
+    }
+
     public List<RegistrationVO> getUserRegistrations(Long userId) {
         return registrationMapper.selectUserRegistrations(userId);
     }
