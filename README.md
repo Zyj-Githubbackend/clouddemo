@@ -33,9 +33,10 @@
 - `deploy/nginx/cloud-demo.local.conf`：本机 Nginx 配置
 - `docker-compose.yml`：整套容器部署方案
 - `docs/`：分主题文档中心
-- `scripts/mcp-login.ps1`：MCP 手动 token 登录辅助脚本
+- `scripts/mcp-login.ps1`：MCP 手动 token 登录并写入环境变量的辅助脚本
+- `scripts/mcp-print-token.ps1`：MCP 手动 token 获取并打印的辅助脚本
 
-另外，仓库根目录下的 `user-service/`、`activity-service/`、`gateway-service/`、`monitor-service/` 目录当前用于保存运行日志，不是源码目录。
+另外，仓库根目录下的 `user-service/`、`activity-service/`、`gateway-service/`、`monitor-service/`、`mcp-service/` 目录当前用于保存运行日志，不是源码目录。
 
 ## 3. 本机运行摘要
 

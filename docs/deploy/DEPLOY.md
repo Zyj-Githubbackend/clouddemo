@@ -160,6 +160,12 @@ docker compose down
 - `MINIO_PUBLIC_BASE_URL`
 - `CLOUD_DEMO_API_BASE_URL`
 
+注意：
+
+- `docker-compose.yml` 中的 `AI_API_KEY: ${DEEPSEEK_API_KEY:-}` 会在启动 Compose 时从宿主机环境变量或仓库根目录 `.env` 文件读取 `DEEPSEEK_API_KEY`
+- 推荐把 DeepSeek 密钥写入本机 `.env` 或当前终端环境变量，不要写入 `docker-compose.yml`
+- 如果没有设置 `DEEPSEEK_API_KEY`，`activity-service` 会收到空的 `AI_API_KEY`，AI 文案生成功能将使用本地兜底文案
+
 Docker 模式下的默认约定：
 
 - `activity-service` 默认连接 `http://minio:9000`
@@ -173,6 +179,7 @@ Compose 当前会将容器日志挂载到仓库根目录：
 - `./user-service/logs`
 - `./activity-service/logs`
 - `./gateway-service/logs`
+- `./mcp-service/logs`
 - `./monitor-service/logs`
 
 这几处目录是运行产物目录，不是源码目录。

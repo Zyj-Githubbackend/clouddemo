@@ -25,7 +25,8 @@
 | `database/init.sql` | 数据库结构、默认账号、活动与报名示例数据 |
 | `deploy/nginx` | 本机与容器代理配置 |
 | `docker-compose.yml` | 一键容器部署入口 |
-| `scripts/mcp-login.ps1` | MCP 手动 token 登录辅助脚本 |
+| `scripts/mcp-login.ps1` | MCP 手动 token 登录并写入环境变量的辅助脚本 |
+| `scripts/mcp-print-token.ps1` | MCP 手动 token 获取并打印的辅助脚本 |
 
 ## 当前推荐访问方式
 

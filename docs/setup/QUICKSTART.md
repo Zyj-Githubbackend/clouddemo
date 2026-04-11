@@ -190,9 +190,16 @@ curl -X POST http://127.0.0.1:9000/user/login \
 
 如果希望整套环境通过 Docker 运行：
 
+```powershell
+Copy-Item .env.example .env
+# 编辑 .env，把 DEEPSEEK_API_KEY 填成本机 DeepSeek 密钥；不需要 AI 文案时可保持为空
+```
+
 ```bash
 docker compose up -d --build
 ```
+
+说明：`docker-compose.yml` 会从宿主机环境变量或仓库根目录 `.env` 读取 `DEEPSEEK_API_KEY`，再传给容器内的 `activity-service`。
 
 访问地址：
 

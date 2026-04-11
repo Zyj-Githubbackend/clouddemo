@@ -32,7 +32,8 @@ cloud-demo/
 │  ├─ package.json
 │  └─ README.md
 ├─ scripts/
-│  └─ mcp-login.ps1
+│  ├─ mcp-login.ps1
+│  └─ mcp-print-token.ps1
 ├─ services/
 │  ├─ common/
 │  ├─ activity-service/
@@ -43,6 +44,7 @@ cloud-demo/
 │  └─ pom.xml
 ├─ activity-service/        # 运行期日志目录
 ├─ gateway-service/         # 运行期日志目录
+├─ mcp-service/             # 运行期日志目录
 ├─ monitor-service/         # 运行期日志目录
 ├─ user-service/            # 运行期日志目录
 ├─ .env.example
@@ -88,6 +90,7 @@ cloud-demo/
 - `user-service/`
 - `activity-service/`
 - `gateway-service/`
+- `mcp-service/`
 - `monitor-service/`
 
 这些目录当前主要用于本机运行与 Docker 运行时挂载日志，和 `services/` 下的源码目录不是同一层职责。

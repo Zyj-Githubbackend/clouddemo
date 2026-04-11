@@ -26,6 +26,9 @@ out/
 # VS Code
 .vscode/
 
+# Trae local MCP credentials
+.trae/mcp.json
+
 # Compiled class file
 *.class
 

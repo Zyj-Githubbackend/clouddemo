@@ -67,6 +67,7 @@
 - [ ] 普通用户登录后可调用查询类 MCP 工具
 - [ ] 管理员登录后可调用活动管理、签到、核销类 MCP 工具
 - [ ] 手动脚本 `scripts/mcp-login.ps1` 可获取并保存 token
+- [ ] 手动脚本 `scripts/mcp-print-token.ps1` 可获取并打印 token
 
 ## Docker 部署
 

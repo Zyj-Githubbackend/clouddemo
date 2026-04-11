@@ -93,6 +93,7 @@ mvn -pl services/mcp-service spring-boot:run
 
 ## 5. 关键环境变量
 
+- `APP_LOG_FILE`
 - `CLOUD_DEMO_API_BASE_URL`
 - `CLOUD_DEMO_API_CONNECT_TIMEOUT`
 - `CLOUD_DEMO_API_READ_TIMEOUT`
@@ -107,7 +108,18 @@ mvn -pl services/mcp-service spring-boot:run
 - 默认监控地址：`http://127.0.0.1:9100`
 - 默认实例名：`mcp-service`
 
-## 7. 本机与 Docker 对外地址
+## 7. 日志
+
+当前模块已对齐其他后端模块的日志配置：
+
+- 默认本机日志文件：`../../mcp-service/logs/debug.log`
+- Docker 日志文件：`/app/logs/debug.log`
+- Compose 挂载目录：`./mcp-service/logs`
+- 日志包含 `traceId`、请求方法、路径、状态码、耗时、用户信息与远端 IP
+
+可通过 `APP_LOG_FILE` 覆盖日志文件位置。
+
+## 8. 本机与 Docker 对外地址
 
 本机 Nginx 模式：
 
@@ -121,10 +133,11 @@ Docker 模式：
 http://localhost:8081/mcp
 ```
 
-## 8. 相关文件
+## 9. 相关文件
 
 - `src/main/java/org/example/mcp/tool/ActivityMcpTools.java`
 - `src/main/java/org/example/mcp/tool/UserMcpTools.java`
 - `src/main/java/org/example/mcp/auth/AuthController.java`
 - `src/main/java/org/example/mcp/auth/McpAccessTokenFilter.java`
+- `src/main/java/org/example/mcp/logging/RequestLoggingFilter.java`
 - `src/main/resources/application.properties`
