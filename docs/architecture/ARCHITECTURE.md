@@ -23,7 +23,8 @@ Nginx :80
                          ▼
                  gateway-service
                   ├─ user-service
-                  └─ activity-service
+                  ├─ activity-service
+                  └─ announcement-service
 ```
 
 ### 依赖基础设施
@@ -68,6 +69,13 @@ Nginx :80
 - AI 活动文案生成
 - MinIO 图片上传与图片读取
 - 导出“我的志愿足迹”Excel
+
+### `announcement-service`
+
+- 首页公告列表与公告详情
+- 管理员发布、编辑、下线、删除公告
+- 公告图片上传与读取
+- 公告可关联具体活动详情页
 
 ### `monitor-service`
 
@@ -184,5 +192,6 @@ Nginx :80
 
 - `monitor-service` 对外端口：`9100`
 - Docker 模式下宿主机映射：`9101`
+- 通过 Nacos discovery 自动加载已注册的 `user-service`、`activity-service`、`announcement-service`、`gateway-service`
 - `mcp-service` 已接入 Spring Boot Admin Client
 - 本机与 Docker 模式均推荐通过前端 Nginx 入口访问监控页面，而不是直接暴露内部端口作为最终入口

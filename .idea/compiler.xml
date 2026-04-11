@@ -7,12 +7,13 @@
         <sourceOutputDir name="target/generated-sources/annotations" />
         <sourceTestOutputDir name="target/generated-test-sources/test-annotations" />
         <outputRelativeToContentRoot value="true" />
-        <module name="monitor-service" />
+        <module name="announcement-service" />
         <module name="mcp-service" />
         <module name="activity-service" />
-        <module name="user-service" />
         <module name="common" />
         <module name="gateway-service" />
+        <module name="monitor-service" />
+        <module name="user-service" />
       </profile>
     </annotationProcessing>
     <bytecodeTargetLevel>
@@ -24,6 +25,7 @@
   <component name="JavacSettings">
     <option name="ADDITIONAL_OPTIONS_OVERRIDE">
       <module name="activity-service" options="-parameters" />
+      <module name="announcement-service" options="-parameters" />
       <module name="cloud-demo" options="" />
       <module name="common" options="-parameters" />
       <module name="gateway-service" options="-parameters" />

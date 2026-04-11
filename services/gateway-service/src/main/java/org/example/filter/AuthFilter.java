@@ -29,7 +29,10 @@ public class AuthFilter implements GlobalFilter, Ordered {
             "/user/login",
             "/user/register",
             "/activity/list",
-            "/activity/image"
+            "/activity/image",
+            "/announcement/home",
+            "/announcement/list",
+            "/announcement/image"
     );
     private static final String TRACE_HEADER = "X-Trace-Id";
 

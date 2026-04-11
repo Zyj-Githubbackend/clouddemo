@@ -20,7 +20,7 @@ const routes = [
   {
     path: '/home',
     name: 'Home',
-    component: () => import('@/views/Home.vue'),
+    component: () => import('@/views/AnnouncementHome.vue'),
     meta: { title: '首页', requireAuth: true }
   },
   {
@@ -28,6 +28,12 @@ const routes = [
     name: 'Activities',
     component: () => import('@/views/ActivityList.vue'),
     meta: { title: '志愿活动', requireAuth: true }
+  },
+  {
+    path: '/announcement/:id',
+    name: 'AnnouncementDetail',
+    component: () => import('@/views/AnnouncementDetail.vue'),
+    meta: { title: '公告详情', requireAuth: true }
   },
   {
     path: '/activity/:id',
@@ -53,6 +59,12 @@ const routes = [
     component: () => import('@/views/admin/AdminLayout.vue'),
     meta: { title: '管理后台', requireAuth: true, requireAdmin: true },
     children: [
+      {
+        path: 'announcements',
+        name: 'AdminAnnouncements',
+        component: () => import('@/views/admin/AnnouncementManage.vue'),
+        meta: { title: '公告管理' }
+      },
       {
         path: 'activities',
         name: 'AdminActivities',

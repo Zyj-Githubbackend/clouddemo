@@ -34,6 +34,9 @@ Docker 模式：
 - `POST /user/register`
 - `GET /activity/list`
 - `GET /activity/image`
+- `GET /announcement/home`
+- `GET /announcement/list`
+- `GET /announcement/image`
 
 其余接口默认需要 `Authorization: Bearer <token>`。
 
@@ -124,7 +127,34 @@ curl http://localhost:9000/activity/1 \
 curl "http://localhost:9000/activity/image?objectKey=activity-images/example.jpg" --output activity.jpg
 ```
 
-## 7. 报名相关接口
+## 7. 公告接口
+
+### 首页公告
+
+```bash
+curl "http://localhost:9000/announcement/home?limit=5"
+```
+
+### 公告列表
+
+```bash
+curl "http://localhost:9000/announcement/list?page=1&size=10"
+```
+
+### 公告详情
+
+```bash
+curl http://localhost:9000/announcement/1 \
+  -H "Authorization: Bearer <token>"
+```
+
+### 公告图片
+
+```bash
+curl "http://localhost:9000/announcement/image?objectKey=announcements/example.jpg" --output announcement.jpg
+```
+
+## 8. 报名相关接口
 
 ### 报名活动
 
@@ -155,7 +185,7 @@ curl -L http://localhost:9000/activity/myRegistrations/exportConfirmed \
   --output confirmed-hours.xlsx
 ```
 
-## 8. 管理员活动管理接口
+## 9. 管理员活动管理接口
 
 ### 创建活动
 
@@ -196,7 +226,7 @@ curl -X DELETE http://localhost:9000/activity/1 \
   -H "Authorization: Bearer <admin-token>"
 ```
 
-## 9. 管理员报名管理接口
+## 10. 管理员报名管理接口
 
 ### 查看全部报名记录
 
@@ -240,7 +270,59 @@ curl -X POST http://localhost:9000/activity/confirmHours/25 \
   -H "Authorization: Bearer <admin-token>"
 ```
 
-## 10. AI 与图片接口
+## 11. 管理员公告管理接口
+
+### 管理员公告列表
+
+```bash
+curl "http://localhost:9000/announcement/admin/list?page=1&size=10" \
+  -H "Authorization: Bearer <admin-token>"
+```
+
+### 发布公告
+
+```bash
+curl -X POST http://localhost:9000/announcement/admin \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer <admin-token>" \
+  -d "{\"title\":\"测试公告\",\"content\":\"公告内容\",\"activityId\":1,\"status\":\"PUBLISHED\",\"sortOrder\":10,\"imageKeys\":[\"announcements/test-1.jpg\"]}"
+```
+
+### 编辑公告
+
+```bash
+curl -X PUT http://localhost:9000/announcement/admin/1 \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer <admin-token>" \
+  -d "{\"title\":\"更新后的公告\",\"content\":\"更新后的公告内容\",\"activityId\":1,\"status\":\"PUBLISHED\",\"sortOrder\":20,\"imageKeys\":[]}"
+```
+
+### 下线与重新发布公告
+
+```bash
+curl -X POST http://localhost:9000/announcement/admin/1/offline \
+  -H "Authorization: Bearer <admin-token>"
+
+curl -X POST http://localhost:9000/announcement/admin/1/publish \
+  -H "Authorization: Bearer <admin-token>"
+```
+
+### 删除公告
+
+```bash
+curl -X DELETE http://localhost:9000/announcement/admin/1 \
+  -H "Authorization: Bearer <admin-token>"
+```
+
+### 上传公告图片
+
+```bash
+curl -X POST http://localhost:9000/announcement/admin/image \
+  -H "Authorization: Bearer <admin-token>" \
+  -F "file=@D:/images/announcement.png"
+```
+
+## 12. AI 与图片接口
 
 ### AI 生成活动文案
 
@@ -259,17 +341,18 @@ curl -X POST http://localhost:9000/activity/admin/image \
   -F "file=@D:/images/activity.png"
 ```
 
-## 11. Nginx 场景验证
+## 13. Nginx 场景验证
 
 ```bash
 curl http://localhost/
 curl "http://localhost/api/activity/list?page=1&size=10"
+curl "http://localhost/api/announcement/home?limit=5"
 curl http://localhost/monitor/
 curl http://localhost/.well-known/oauth-authorization-server
 curl -i http://localhost/mcp
 ```
 
-## 12. 常见结果判断
+## 14. 常见结果判断
 
 - `9000` 通、`/api` 不通：Nginx API 代理问题
 - `9100` 通、`/monitor/` 不通：监控代理问题

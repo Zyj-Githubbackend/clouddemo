@@ -24,6 +24,7 @@ mysql -u root -p < database/init.sql
 - `database/init.sql` 会重建 `volunteer_platform`
 - 请勿直接在已有正式数据的库上执行
 - 脚本会导入默认账号、20 条活动及报名记录
+- Docker MySQL 已经初始化过时，更新 `database/init.sql` 不会自动补表；新增公告功能可执行 `database/migrations/20260411_add_announcement.sql`
 
 ## 3. 启动 Redis、Nacos、MinIO
 
@@ -93,6 +94,7 @@ mvn clean install -DskipTests
 
 - `8100`：`user-service`
 - `8200`：`activity-service`
+- `8300`：`announcement-service`
 - `9000`：`gateway-service`
 - `9100`：`monitor-service`
 - `9300`：`mcp-service`
@@ -100,6 +102,7 @@ mvn clean install -DskipTests
 说明：
 
 - `activity-service` 已内置 MinIO 默认值
+- `announcement-service` 已内置 MinIO 默认值
 - `mcp-service` 默认回调 `http://127.0.0.1:9000`
 - 如需覆盖，可通过环境变量修改 `MINIO_*`、`CLOUD_DEMO_API_BASE_URL` 等配置
 
@@ -152,6 +155,7 @@ npm run build
 ```bash
 curl http://127.0.0.1/
 curl "http://127.0.0.1:9000/activity/list?page=1&size=10"
+curl "http://127.0.0.1:9000/announcement/home?limit=5"
 curl http://127.0.0.1:9100/actuator/health
 curl http://127.0.0.1:9300/actuator/health
 ```

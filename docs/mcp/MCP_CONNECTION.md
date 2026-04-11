@@ -270,6 +270,9 @@ Docker 模式：
 
 - `listActivities`
 - `getActivityDetail`
+- `listHomeAnnouncements`
+- `listAnnouncements`
+- `getAnnouncementDetail`
 - `getMyRegistrations`
 - `registerActivity`
 - `cancelMyRegistration`
@@ -296,6 +299,14 @@ Docker 模式：
 - `confirmHours`
 - `batchConfirmHours`
 - `listVolunteerHours`
+- `listAdminAnnouncements`
+- `getAdminAnnouncementDetail`
+- `createAnnouncement`
+- `updateAnnouncement`
+- `publishAnnouncement`
+- `offlineAnnouncement`
+- `deleteAnnouncement`
+- `uploadAnnouncementImage`
 
 ### 额外工具
 
@@ -366,6 +377,7 @@ Invoke-RestMethod -Method Post -Uri "http://localhost/mcp/auth/login" -ContentTy
 
 - [services/mcp-service/README.md](../../services/mcp-service/README.md)
 - [services/mcp-service/src/main/java/org/example/mcp/tool/ActivityMcpTools.java](../../services/mcp-service/src/main/java/org/example/mcp/tool/ActivityMcpTools.java)
+- [services/mcp-service/src/main/java/org/example/mcp/tool/AnnouncementMcpTools.java](../../services/mcp-service/src/main/java/org/example/mcp/tool/AnnouncementMcpTools.java)
 - [services/mcp-service/src/main/java/org/example/mcp/tool/UserMcpTools.java](../../services/mcp-service/src/main/java/org/example/mcp/tool/UserMcpTools.java)
 - [services/mcp-service/src/main/java/org/example/mcp/auth/AuthController.java](../../services/mcp-service/src/main/java/org/example/mcp/auth/AuthController.java)
 - [services/mcp-service/src/main/java/org/example/mcp/auth/McpAccessTokenFilter.java](../../services/mcp-service/src/main/java/org/example/mcp/auth/McpAccessTokenFilter.java)

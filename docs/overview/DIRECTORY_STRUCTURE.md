@@ -37,12 +37,14 @@ cloud-demo/
 ├─ services/
 │  ├─ common/
 │  ├─ activity-service/
+│  ├─ announcement-service/
 │  ├─ gateway-service/
 │  ├─ mcp-service/
 │  ├─ monitor-service/
 │  ├─ user-service/
 │  └─ pom.xml
 ├─ activity-service/        # 运行期日志目录
+├─ announcement-service/    # 运行期日志目录
 ├─ gateway-service/         # 运行期日志目录
 ├─ mcp-service/             # 运行期日志目录
 ├─ monitor-service/         # 运行期日志目录
@@ -63,6 +65,7 @@ cloud-demo/
 - `common/`：统一结果、异常、JWT 工具
 - `user-service/`：用户注册、登录、资料维护、时长统计
 - `activity-service/`：活动、报名、签到、时长核销、AI 文案、图片上传
+- `announcement-service/`：公告发布、首页公告、公告图片上传和关联活动跳转
 - `gateway-service/`：统一入口、JWT 鉴权、请求头注入
 - `monitor-service/`：Spring Boot Admin 服务端
 - `mcp-service/`：MCP Server 与 OAuth 端点
@@ -89,6 +92,7 @@ cloud-demo/
 
 - `user-service/`
 - `activity-service/`
+- `announcement-service/`
 - `gateway-service/`
 - `mcp-service/`
 - `monitor-service/`

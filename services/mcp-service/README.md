@@ -41,6 +41,9 @@ CLOUD_DEMO_API_BASE_URL
 
 - `listActivities`
 - `getActivityDetail`
+- `listHomeAnnouncements`
+- `listAnnouncements`
+- `getAnnouncementDetail`
 - `getMyRegistrations`
 - `registerActivity`
 - `cancelMyRegistration`
@@ -67,6 +70,14 @@ CLOUD_DEMO_API_BASE_URL
 - `confirmHours`
 - `batchConfirmHours`
 - `listVolunteerHours`
+- `listAdminAnnouncements`
+- `getAdminAnnouncementDetail`
+- `createAnnouncement`
+- `updateAnnouncement`
+- `publishAnnouncement`
+- `offlineAnnouncement`
+- `deleteAnnouncement`
+- `uploadAnnouncementImage`
 
 补充工具：
 
@@ -136,6 +147,7 @@ http://localhost:8081/mcp
 ## 9. 相关文件
 
 - `src/main/java/org/example/mcp/tool/ActivityMcpTools.java`
+- `src/main/java/org/example/mcp/tool/AnnouncementMcpTools.java`
 - `src/main/java/org/example/mcp/tool/UserMcpTools.java`
 - `src/main/java/org/example/mcp/auth/AuthController.java`
 - `src/main/java/org/example/mcp/auth/McpAccessTokenFilter.java`
