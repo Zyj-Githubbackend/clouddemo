@@ -9,7 +9,9 @@ COPY services/common/pom.xml services/common/pom.xml
 COPY services/gateway-service/pom.xml services/gateway-service/pom.xml
 COPY services/user-service/pom.xml services/user-service/pom.xml
 COPY services/activity-service/pom.xml services/activity-service/pom.xml
+COPY services/announcement-service/pom.xml services/announcement-service/pom.xml
 COPY services/monitor-service/pom.xml services/monitor-service/pom.xml
+COPY services/mcp-service/pom.xml services/mcp-service/pom.xml
 
 RUN mvn -B -pl services/${MODULE} -am dependency:go-offline
 

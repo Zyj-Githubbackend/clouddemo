@@ -12,6 +12,7 @@
 
 - [ ] `user-service` 监听 `8100`
 - [ ] `activity-service` 监听 `8200`
+- [ ] `announcement-service` 监听 `8300`
 - [ ] `gateway-service` 监听 `9000`
 - [ ] `monitor-service` 监听 `9100`
 - [ ] `mcp-service` 监听 `9300`
@@ -22,6 +23,7 @@
 - [ ] `frontend/dist` 已通过 `npm run build` 生成
 - [ ] Nginx 已成功加载 `deploy/nginx/cloud-demo.local.conf`
 - [ ] `/api/` 已转发到网关
+- [ ] `/announcement/**` 已通过网关转发到 `announcement-service`
 - [ ] `/monitor/` 已转发到监控后台
 - [ ] `/.well-known/*`、`/authorize`、`/token`、`/register`、`/mcp*` 已转发到 `mcp-service`
 
@@ -38,6 +40,7 @@
 - [ ] 志愿者账号可登录
 - [ ] 活动列表可打开并支持筛选
 - [ ] 活动详情可打开
+- [ ] 首页公告可打开并支持跳转关联活动详情
 - [ ] 用户可报名活动
 - [ ] 用户可取消未开始活动的报名
 - [ ] 用户可在“我的志愿足迹”查看报名记录
@@ -57,6 +60,8 @@
 - [ ] 管理员可查看待核销活动
 - [ ] 管理员可核销志愿时长
 - [ ] 管理员可查看志愿时长统计
+- [ ] 管理员可发布、编辑、下线和删除公告
+- [ ] 管理员可上传公告图片并关联活动
 
 ## MCP 接入
 

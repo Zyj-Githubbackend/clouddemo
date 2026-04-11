@@ -8,6 +8,7 @@
 - 前端可开发模式运行，也可构建后交给 Nginx 托管
 - `monitor-service` 支持通过 `/monitor/` 反向代理访问
 - `mcp-service` 支持通过 `/mcp` 对外提供 MCP 能力
+- `announcement-service` 支持首页公告、公告图片和关联活动跳转
 - Docker Compose 可一键启动 MySQL、Redis、Nacos、MinIO、前端与全部后端服务
 - 本机 Jenkins 可先执行 `mvn -B test` 再执行 `docker compose up -d --build`
 
@@ -18,6 +19,7 @@
 | `services/common` | 统一结果结构、异常与 JWT 工具 |
 | `services/user-service` | 注册登录、资料维护、志愿时长查询 |
 | `services/activity-service` | 活动管理、报名、签到、时长核销、AI 文案、图片上传、Excel 导出 |
+| `services/announcement-service` | 公告发布、编辑、下线、图片上传和首页公告展示 |
 | `services/gateway-service` | 统一入口、JWT 鉴权、请求头透传 |
 | `services/monitor-service` | Spring Boot Admin 监控中心 |
 | `services/mcp-service` | 独立 MCP Server，封装用户与活动相关工具 |
@@ -49,6 +51,7 @@
 ## 最近对齐的能力
 
 - 活动多图上传与详情多图展示
+- 公告独立微服务与公告首页
 - 用户取消未开始活动的报名
 - 用户导出已核销志愿足迹 Excel
 - `activity/list` 支持 `status`、`category`、`recruitmentPhase` 筛选

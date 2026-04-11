@@ -65,7 +65,26 @@ CREATE TABLE vol_activity (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='志愿活动表';
 
 -- ==============================================================================
--- 3. 报名流水表
+-- 3. 公告表
+-- ==============================================================================
+CREATE TABLE vol_announcement (
+    id               BIGINT        PRIMARY KEY AUTO_INCREMENT COMMENT '公告ID',
+    title            VARCHAR(200)  NOT NULL COMMENT '公告标题',
+    content          TEXT          NOT NULL COMMENT '公告正文',
+    image_key        TEXT          COMMENT '公告图片对象键列表，逗号分隔',
+    activity_id      BIGINT        COMMENT '关联活动ID，可为空',
+    status           VARCHAR(20)   NOT NULL DEFAULT 'PUBLISHED' COMMENT 'PUBLISHED-已发布, OFFLINE-已下线',
+    sort_order       INT           NOT NULL DEFAULT 0 COMMENT '排序值，越大越靠前',
+    publisher_id     BIGINT        COMMENT '发布管理员ID',
+    publish_time     DATETIME      COMMENT '发布时间',
+    create_time      DATETIME      DEFAULT CURRENT_TIMESTAMP,
+    update_time      DATETIME      DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    INDEX idx_status_sort (status, sort_order, publish_time),
+    INDEX idx_activity_id (activity_id)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='公告表';
+
+-- ==============================================================================
+-- 4. 报名流水表
 -- ==============================================================================
 CREATE TABLE vol_registration (
     id                BIGINT    PRIMARY KEY AUTO_INCREMENT COMMENT '报名ID',
@@ -85,7 +104,7 @@ CREATE TABLE vol_registration (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='报名流水表';
 
 -- ==============================================================================
--- 4. 活动统计视图（供 BI / 报表使用，应用服务层不直接查询此视图）
+-- 5. 活动统计视图（供 BI / 报表使用，应用服务层不直接查询此视图）
 -- ==============================================================================
 CREATE VIEW v_activity_statistics AS
 SELECT
@@ -107,7 +126,7 @@ GROUP BY a.id, a.title, a.category, a.status, a.max_participants,
          a.current_participants, a.volunteer_hours, a.start_time, a.end_time;
 
 -- ==============================================================================
--- 5. 测试数据 — 用户（1 管理员 + 10 志愿者）
+-- 6. 测试数据 — 用户（1 管理员 + 10 志愿者）
 --    密码均为 password123（此处已使用 BCrypt 哈希存储；同一明文每行哈希不同属正常现象；生产可配合密码策略）
 -- ==============================================================================
 INSERT INTO sys_user (username, password, real_name, student_no, phone, email, role, total_volunteer_hours) VALUES
@@ -124,7 +143,7 @@ INSERT INTO sys_user (username, password, real_name, student_no, phone, email, r
 ('student10', '$2a$10$vtweHP2zt1bs2nTKmYnEJ.RSIeGxrutpWqsaj/coxakFdDi2s4H72', '林小红',   '2022104', '13800138010', 'linxh@university.edu',    'VOLUNTEER',  0.00);
 
 -- ==============================================================================
--- 6. 测试数据 — 志愿活动（20 条，覆盖所有状态与时间场景）
+-- 7. 测试数据 — 志愿活动（20 条，覆盖所有状态与时间场景）
 --    基准日期 2026-03-25
 --    活动1-7：招募中（registration_start <= 今日 <= registration_deadline）
 --    活动8-10：招募未开始（registration_start > 今日）
@@ -285,7 +304,21 @@ INSERT INTO vol_activity (title, description, location, max_participants, curren
  'CANCELLED', '校园服务', 1);
 
 -- ==============================================================================
--- 7. 测试数据 — 报名记录（54 条）
+-- 8. 测试数据 — 公告
+-- ==============================================================================
+INSERT INTO vol_announcement (title, content, image_key, activity_id, status, sort_order, publisher_id, publish_time) VALUES
+('四月志愿服务月安排发布',
+ '四月志愿服务月已经开启。请同学们关注招募截止时间，优先选择与课程安排不冲突的活动，并在活动开始前完成报名确认。',
+ NULL, 1, 'PUBLISHED', 30, 1, '2026-03-25 09:00:00'),
+('运动会志愿保障招募提醒',
+ '校运动会志愿保障岗位需要引导、计时、后勤等多类志愿者。报名成功后请留意活动详情页的时间与地点安排。',
+ NULL, 3, 'PUBLISHED', 20, 1, '2026-03-26 10:00:00'),
+('志愿时长核销说明',
+ '活动结束后，管理员会根据签到记录进行志愿时长核销。请同学们参加活动时按要求完成现场签到。',
+ NULL, NULL, 'PUBLISHED', 10, 1, '2026-03-27 10:00:00');
+
+-- ==============================================================================
+-- 9. 测试数据 — 报名记录（54 条）
 --    活动1(2人) 活动2(3人) 活动3(5人) 活动4(10人) 活动5(4人) 活动6(6人) 活动7(2人)
 --    活动11(8人) 活动12(12人) 活动13(7人)
 --    活动14(15人→抽样插6) 活动15(8人→抽样插5) 活动16(9人→抽样插5)

@@ -8,6 +8,7 @@
 - 网关：`gateway-service`，端口 `9000`
 - 用户服务：`user-service`，端口 `8100`
 - 活动服务：`activity-service`，端口 `8200`
+- 公告服务：`announcement-service`，端口 `8300`
 - 监控服务：`monitor-service`，端口 `9100`
 - MCP 服务：`mcp-service`，端口 `9300`
 - 注册中心：Nacos，端口 `8848`
@@ -18,6 +19,7 @@
 当前版本的重点能力：
 
 - 活动支持多图上传、编辑和详情轮播展示
+- 公告支持独立微服务、首页展示、图片上传和关联活动详情页
 - 用户可在“我的志愿足迹”页面取消未开始活动的报名
 - 用户可导出本人已核销志愿时长及对应活动明细 Excel
 - 管理员可进行活动创建、编辑、取消、结项、签到、时长核销
@@ -36,7 +38,7 @@
 - `scripts/mcp-login.ps1`：MCP 手动 token 登录并写入环境变量的辅助脚本
 - `scripts/mcp-print-token.ps1`：MCP 手动 token 获取并打印的辅助脚本
 
-另外，仓库根目录下的 `user-service/`、`activity-service/`、`gateway-service/`、`monitor-service/`、`mcp-service/` 目录当前用于保存运行日志，不是源码目录。
+另外，仓库根目录下的 `user-service/`、`activity-service/`、`announcement-service/`、`gateway-service/`、`monitor-service/`、`mcp-service/` 目录当前用于保存运行日志，不是源码目录。
 
 ## 3. 本机运行摘要
 
@@ -78,8 +80,9 @@ mvn clean install -DskipTests
 1. `UserApplication`
 2. `ActivityApplication`
 3. `GatewayApplication`
-4. `MonitorApplication`
-5. `McpApplication`
+4. `AnnouncementApplication`
+5. `MonitorApplication`
+6. `McpApplication`
 
 ### 3.4 启动前端
 
