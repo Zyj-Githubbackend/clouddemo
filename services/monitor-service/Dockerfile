@@ -1,4 +1,7 @@
-FROM public.ecr.aws/docker/library/maven:3.9.9-eclipse-temurin-17 AS build
+ARG MAVEN_IMAGE=public.ecr.aws/docker/library/maven:3.9.9-eclipse-temurin-17
+ARG RUNTIME_IMAGE=public.ecr.aws/docker/library/eclipse-temurin:17-jre
+
+FROM ${MAVEN_IMAGE} AS build
 
 WORKDIR /workspace
 
@@ -19,7 +22,7 @@ COPY services/monitor-service services/monitor-service
 
 RUN mvn -B -pl services/monitor-service -am clean package -DskipTests
 
-FROM public.ecr.aws/docker/library/eclipse-temurin:17-jre
+FROM ${RUNTIME_IMAGE}
 
 WORKDIR /app
 ENV APP_LOG_FILE=/app/logs/debug.log

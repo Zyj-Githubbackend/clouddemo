@@ -202,6 +202,7 @@ curl -X POST http://127.0.0.1:9000/user/login \
 ```powershell
 Copy-Item .env.example .env
 # 编辑 .env，把 DEEPSEEK_API_KEY 填成本机 DeepSeek 密钥；不需要 AI 文案时可保持为空
+# 如果部署机器无法稳定访问默认镜像源，可在 .env 里覆盖 *_IMAGE 变量为内网镜像地址
 ```
 
 ```bash

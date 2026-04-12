@@ -2,6 +2,9 @@
 .github
 .idea
 .vscode
+.env
+.env.local
+.m2
 node_modules
 frontend/node_modules
 frontend/dist
@@ -11,4 +14,3 @@ logs
 **/*.log
 cp.txt
 services/**/cp.txt
-

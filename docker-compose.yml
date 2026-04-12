@@ -1,6 +1,6 @@
 services:
   mysql:
-    image: mysql:8.0
+    image: ${MYSQL_IMAGE:-public.ecr.aws/docker/library/mysql:8.0}
     container_name: cloud-demo-mysql
     restart: unless-stopped
     command: --character-set-server=utf8mb4 --collation-server=utf8mb4_unicode_ci
@@ -13,14 +13,14 @@ services:
       - cloud-demo
 
   redis:
-    image: redis:7-alpine
+    image: ${REDIS_IMAGE:-public.ecr.aws/docker/library/redis:7-alpine}
     container_name: cloud-demo-redis
     restart: unless-stopped
     networks:
       - cloud-demo
 
   nacos:
-    image: nacos/nacos-server:v2.4.2
+    image: ${NACOS_IMAGE:-nacos/nacos-server:v2.4.2}
     container_name: cloud-demo-nacos
     restart: unless-stopped
     environment:
@@ -32,7 +32,7 @@ services:
       - cloud-demo
 
   minio:
-    image: minio/minio:latest
+    image: ${MINIO_IMAGE:-quay.io/minio/minio:latest}
     container_name: cloud-demo-minio
     restart: unless-stopped
     command: server /data --console-address ":9001"
@@ -51,6 +51,9 @@ services:
     build:
       context: .
       dockerfile: services/user-service/Dockerfile
+      args:
+        MAVEN_IMAGE: ${MAVEN_IMAGE:-public.ecr.aws/docker/library/maven:3.9.9-eclipse-temurin-17}
+        RUNTIME_IMAGE: ${JAVA_RUNTIME_IMAGE:-public.ecr.aws/docker/library/eclipse-temurin:17-jre}
     container_name: cloud-demo-user-service
     restart: unless-stopped
     depends_on:
@@ -76,6 +79,9 @@ services:
     build:
       context: .
       dockerfile: services/activity-service/Dockerfile
+      args:
+        MAVEN_IMAGE: ${MAVEN_IMAGE:-public.ecr.aws/docker/library/maven:3.9.9-eclipse-temurin-17}
+        RUNTIME_IMAGE: ${JAVA_RUNTIME_IMAGE:-public.ecr.aws/docker/library/eclipse-temurin:17-jre}
     container_name: cloud-demo-activity-service
     restart: unless-stopped
     depends_on:
@@ -109,6 +115,9 @@ services:
     build:
       context: .
       dockerfile: services/announcement-service/Dockerfile
+      args:
+        MAVEN_IMAGE: ${MAVEN_IMAGE:-public.ecr.aws/docker/library/maven:3.9.9-eclipse-temurin-17}
+        RUNTIME_IMAGE: ${JAVA_RUNTIME_IMAGE:-public.ecr.aws/docker/library/eclipse-temurin:17-jre}
     container_name: cloud-demo-announcement-service
     restart: unless-stopped
     depends_on:
@@ -138,6 +147,9 @@ services:
     build:
       context: .
       dockerfile: services/feedback-service/Dockerfile
+      args:
+        MAVEN_IMAGE: ${MAVEN_IMAGE:-public.ecr.aws/docker/library/maven:3.9.9-eclipse-temurin-17}
+        RUNTIME_IMAGE: ${JAVA_RUNTIME_IMAGE:-public.ecr.aws/docker/library/eclipse-temurin:17-jre}
     container_name: cloud-demo-feedback-service
     restart: unless-stopped
     depends_on:
@@ -167,6 +179,9 @@ services:
     build:
       context: .
       dockerfile: services/gateway-service/Dockerfile
+      args:
+        MAVEN_IMAGE: ${MAVEN_IMAGE:-public.ecr.aws/docker/library/maven:3.9.9-eclipse-temurin-17}
+        RUNTIME_IMAGE: ${JAVA_RUNTIME_IMAGE:-public.ecr.aws/docker/library/eclipse-temurin:17-jre}
     container_name: cloud-demo-gateway-service
     restart: unless-stopped
     depends_on:
@@ -194,6 +209,9 @@ services:
     build:
       context: .
       dockerfile: services/monitor-service/Dockerfile
+      args:
+        MAVEN_IMAGE: ${MAVEN_IMAGE:-public.ecr.aws/docker/library/maven:3.9.9-eclipse-temurin-17}
+        RUNTIME_IMAGE: ${JAVA_RUNTIME_IMAGE:-public.ecr.aws/docker/library/eclipse-temurin:17-jre}
     container_name: cloud-demo-monitor-service
     restart: unless-stopped
     depends_on:
@@ -215,6 +233,9 @@ services:
     build:
       context: .
       dockerfile: services/mcp-service/Dockerfile
+      args:
+        MAVEN_IMAGE: ${MAVEN_IMAGE:-public.ecr.aws/docker/library/maven:3.9.9-eclipse-temurin-17}
+        RUNTIME_IMAGE: ${JAVA_RUNTIME_IMAGE:-public.ecr.aws/docker/library/eclipse-temurin:17-jre}
     container_name: cloud-demo-mcp-service
     restart: unless-stopped
     depends_on:
@@ -235,6 +256,9 @@ services:
     build:
       context: .
       dockerfile: frontend/Dockerfile
+      args:
+        NODE_IMAGE: ${NODE_IMAGE:-public.ecr.aws/docker/library/node:20-alpine}
+        NGINX_IMAGE: ${NGINX_IMAGE:-public.ecr.aws/docker/library/nginx:1.27-alpine}
     container_name: cloud-demo-frontend
     restart: unless-stopped
     depends_on:
