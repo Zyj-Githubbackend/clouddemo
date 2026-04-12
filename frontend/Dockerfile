@@ -1,4 +1,7 @@
-FROM public.ecr.aws/docker/library/node:20-alpine AS build
+ARG NODE_IMAGE=public.ecr.aws/docker/library/node:20-alpine
+ARG NGINX_IMAGE=public.ecr.aws/docker/library/nginx:1.27-alpine
+
+FROM ${NODE_IMAGE} AS build
 
 WORKDIR /app
 
@@ -8,7 +11,7 @@ RUN npm ci
 COPY frontend ./
 RUN npm run build
 
-FROM public.ecr.aws/docker/library/nginx:1.27-alpine
+FROM ${NGINX_IMAGE}
 
 COPY frontend/nginx.docker.conf /etc/nginx/conf.d/default.conf
 COPY --from=build /app/dist /usr/share/nginx/html

@@ -158,6 +158,14 @@ docker compose down
 
 可在仓库根目录参考 `.env.example` 创建 `.env`：
 
+- `MYSQL_IMAGE`
+- `REDIS_IMAGE`
+- `NACOS_IMAGE`
+- `MINIO_IMAGE`
+- `MAVEN_IMAGE`
+- `JAVA_RUNTIME_IMAGE`
+- `NODE_IMAGE`
+- `NGINX_IMAGE`
 - `DEEPSEEK_API_KEY`
 - `MINIO_ENDPOINT`
 - `MINIO_ACCESS_KEY`
@@ -168,6 +176,7 @@ docker compose down
 
 注意：
 
+- 镜像变量用于适配不同网络环境，默认优先使用公共 ECR 中的 Docker Library 镜像；如果部署机器只能访问内网镜像仓库，可在 `.env` 中改这些变量，不需要改 Dockerfile 或 `docker-compose.yml`
 - `docker-compose.yml` 中的 `AI_API_KEY: ${DEEPSEEK_API_KEY:-}` 会在启动 Compose 时从宿主机环境变量或仓库根目录 `.env` 文件读取 `DEEPSEEK_API_KEY`
 - 推荐把 DeepSeek 密钥写入本机 `.env` 或当前终端环境变量，不要写入 `docker-compose.yml`
 - 如果没有设置 `DEEPSEEK_API_KEY`，`activity-service` 会收到空的 `AI_API_KEY`，AI 文案生成功能将使用本地兜底文案

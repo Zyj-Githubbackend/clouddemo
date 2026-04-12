@@ -1,16 +1,28 @@
-FROM public.ecr.aws/docker/library/maven:3.9.9-eclipse-temurin-17 AS build
+ARG MAVEN_IMAGE=public.ecr.aws/docker/library/maven:3.9.9-eclipse-temurin-17
+ARG RUNTIME_IMAGE=public.ecr.aws/docker/library/eclipse-temurin:17-jre
+
+FROM ${MAVEN_IMAGE} AS build
 
 WORKDIR /workspace
 
+COPY pom.xml ./
+COPY services/pom.xml services/pom.xml
+COPY services/common/pom.xml services/common/pom.xml
+COPY services/gateway-service/pom.xml services/gateway-service/pom.xml
+COPY services/user-service/pom.xml services/user-service/pom.xml
+COPY services/activity-service/pom.xml services/activity-service/pom.xml
+COPY services/announcement-service/pom.xml services/announcement-service/pom.xml
+COPY services/feedback-service/pom.xml services/feedback-service/pom.xml
+COPY services/monitor-service/pom.xml services/monitor-service/pom.xml
 COPY services/mcp-service/pom.xml services/mcp-service/pom.xml
 
-RUN mvn -B -f services/mcp-service/pom.xml dependency:go-offline
+RUN mvn -B -pl services/mcp-service -am dependency:go-offline
 
 COPY services/mcp-service services/mcp-service
 
-RUN mvn -B -f services/mcp-service/pom.xml clean package -DskipTests
+RUN mvn -B -pl services/mcp-service -am clean package -DskipTests
 
-FROM public.ecr.aws/docker/library/eclipse-temurin:17-jre
+FROM ${RUNTIME_IMAGE}
 
 WORKDIR /app
 ENV APP_LOG_FILE=/app/logs/debug.log
