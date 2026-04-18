@@ -1,6 +1,6 @@
 SET NAMES utf8mb4;
 
-USE volunteer_platform;
+USE feedback_service_db;
 
 CREATE TABLE IF NOT EXISTS feedback (
     id                 BIGINT        PRIMARY KEY AUTO_INCREMENT,

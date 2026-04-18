@@ -14,7 +14,7 @@ Browser
   │
   ▼
 Nginx :80
-  ├─ /                -> frontend/dist
+  ├─ /                -> frontend2/dist
   ├─ /api/**          -> gateway-service:9000
   ├─ /monitor/**      -> monitor-service:9100
   ├─ /.well-known/**  -> mcp-service:9300
@@ -38,7 +38,7 @@ Browser
   │
   ▼
 edge-nginx :8081
-  ├─ /                  -> frontend/dist
+  ├─ /                  -> frontend2/dist
   ├─ /api/**            -> gateway-a 或 gateway-b
   ├─ /monitor/a/**      -> monitor-a
   ├─ /monitor/b/**      -> monitor-b

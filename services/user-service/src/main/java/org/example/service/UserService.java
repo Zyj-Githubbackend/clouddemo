@@ -3,6 +3,7 @@ package org.example.service;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import org.example.common.exception.BusinessException;
 import org.example.common.util.JwtUtil;
+import org.example.dto.InternalUserSummary;
 import org.example.dto.LoginRequest;
 import org.example.dto.RegisterRequest;
 import org.example.entity.User;
@@ -18,7 +19,11 @@ import org.springframework.util.StringUtils;
 
 import java.math.BigDecimal;
 import java.util.ArrayList;
+import java.util.Collections;
+import java.util.LinkedHashMap;
+import java.util.LinkedHashSet;
 import java.util.List;
+import java.util.Map;
 import java.util.regex.Pattern;
 
 @Service
@@ -167,6 +172,44 @@ public class UserService {
         }
         log.info("queried volunteer hours keyword={} resultCount={}", keyword, result.size());
         return result;
+    }
+
+    public List<InternalUserSummary> listUserSummariesByIds(List<Long> ids) {
+        if (ids == null || ids.isEmpty()) {
+            return Collections.emptyList();
+        }
+
+        List<Long> normalizedIds = ids.stream()
+                .filter(id -> id != null && id > 0)
+                .distinct()
+                .toList();
+        if (normalizedIds.isEmpty()) {
+            return Collections.emptyList();
+        }
+
+        Map<Long, User> userMap = new LinkedHashMap<>();
+        for (User user : userMapper.selectBatchIds(normalizedIds)) {
+            if (user != null && user.getId() != null) {
+                userMap.put(user.getId(), user);
+            }
+        }
+
+        List<InternalUserSummary> summaries = new ArrayList<>(userMap.size());
+        for (Long id : new LinkedHashSet<>(normalizedIds)) {
+            User user = userMap.get(id);
+            if (user == null) {
+                continue;
+            }
+            InternalUserSummary summary = new InternalUserSummary();
+            summary.setId(user.getId());
+            summary.setUsername(user.getUsername());
+            summary.setRealName(user.getRealName());
+            summary.setStudentNo(user.getStudentNo());
+            summary.setPhone(user.getPhone());
+            summaries.add(summary);
+        }
+        log.info("queried internal user summaries requestCount={} resultCount={}", normalizedIds.size(), summaries.size());
+        return summaries;
     }
 
     public void updateVolunteerHours(Long userId, BigDecimal hours) {

@@ -38,5 +38,6 @@
 
 ## 前端
 
-- [前端快速启动](frontend/QUICKSTART.md)
-- [前端交付摘要](frontend/PROJECT_COMPLETE.md)
+- [前端工程说明](../frontend2/README.md)
+- [前端页面清单](ui-page-inventory.md)
+- [Stitch 页面规格](stitch-page-spec.md)

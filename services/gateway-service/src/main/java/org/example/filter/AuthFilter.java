@@ -33,7 +33,8 @@ public class AuthFilter implements GlobalFilter, Ordered {
             "/api/announcement/home",
             "/api/announcement/list",
             "/api/announcement/image",
-            "/api/announcement/attachment"
+            "/api/announcement/attachment",
+            "/fallback/"
     );
     private static final String TRACE_HEADER = "X-Trace-Id";
     private static final String DEFAULT_STACK_ID = System.getenv().getOrDefault("STACK_ID", "single");

@@ -115,7 +115,7 @@ mvn clean install -DskipTests
 ### 开发模式
 
 ```bash
-cd frontend
+cd frontend2
 npm install
 npm run dev
 ```
@@ -125,7 +125,7 @@ npm run dev
 ### 构建模式
 
 ```bash
-cd frontend
+cd frontend2
 npm install
 npm run build
 ```
@@ -221,6 +221,21 @@ powershell -ExecutionPolicy Bypass -File deploy/deploy-all.ps1
 - `deploy/up-edge.*`
 
 说明：当前推荐部署入口为 `compose.shared.yml`、`compose.stack.yml`、`compose.edge.yml`。根目录 `docker-compose.yml` 为历史单架构兼容文件，不再作为主入口。
+
+一键部署会自动完成：
+
+- shared MySQL 的分库与服务账号初始化
+- 核心业务表初始化
+- 开箱可测的示例数据写入（用户、活动、报名、公告、反馈）
+- 部署完成后的健康验收（含 A/B 登录冒烟）
+
+默认会写入的测试数据规模：
+
+- 账号：11（`admin` + `student01` ~ `student10`）
+- 活动：7（覆盖招募中、进行中、已完成、已取消）
+- 报名记录：13
+- 公告：4
+- 反馈工单：3
 
 访问地址：
 

@@ -1,9 +1,11 @@
 package org.example.service;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import org.example.client.UserServiceClient;
 import org.apache.poi.ss.usermodel.Sheet;
 import org.apache.poi.xssf.usermodel.XSSFWorkbook;
 import org.example.dto.ActivityCreateRequest;
+import org.example.dto.UserSummary;
 import org.example.entity.Activity;
 import org.example.entity.Registration;
 import org.example.mapper.ActivityMapper;
@@ -19,6 +21,7 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.ArgumentCaptor;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.dao.DuplicateKeyException;
 import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.data.redis.core.ValueOperations;
 
@@ -30,8 +33,10 @@ import java.util.concurrent.TimeUnit;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
@@ -61,6 +66,9 @@ class ActivityServiceTest {
     @Mock
     private IdempotencyHelper idempotencyHelper;
 
+    @Mock
+    private UserServiceClient userServiceClient;
+
     private ActivityService activityService;
 
     @BeforeEach
@@ -72,6 +80,7 @@ class ActivityServiceTest {
                 redisTemplate,
                 minioStorageService,
                 idempotencyHelper,
+                userServiceClient,
                 new ObjectMapper()
         );
 
@@ -112,7 +121,9 @@ class ActivityServiceTest {
         assertEquals(0, savedActivity.getCurrentParticipants());
         assertEquals(7L, savedActivity.getCreatorId());
         verify(valueOperations).set("activity:stock:88", "30", 7, TimeUnit.DAYS);
-        verify(eventOutboxMapper).insert(any(EventOutbox.class));
+        ArgumentCaptor<EventOutbox> outboxCaptor = ArgumentCaptor.forClass(EventOutbox.class);
+        verify(eventOutboxMapper).insert(outboxCaptor.capture());
+        assertEquals(MessagingConstants.ROUTING_ACTIVITY_UPSERTED, outboxCaptor.getValue().getEventType());
     }
 
     @Test
@@ -175,6 +186,73 @@ class ActivityServiceTest {
     }
 
     @Test
+    void registerActivityShouldReactivateCancelledRegistrationInsteadOfInsert() {
+        Activity activity = new Activity();
+        activity.setId(19L);
+        activity.setStatus("RECRUITING");
+        activity.setRegistrationStartTime(LocalDateTime.now().minusHours(1));
+        activity.setRegistrationDeadline(LocalDateTime.now().plusHours(2));
+
+        Registration registration = new Registration();
+        registration.setId(31L);
+        registration.setActivityId(19L);
+        registration.setUserId(1L);
+        registration.setStatus("CANCELLED");
+        registration.setCheckInStatus(1);
+        registration.setCheckInTime(LocalDateTime.now().minusHours(3));
+        registration.setHoursConfirmed(1);
+        registration.setConfirmTime(LocalDateTime.now().minusHours(2));
+
+        when(activityMapper.selectById(19L)).thenReturn(activity);
+        when(registrationMapper.selectOne(any())).thenReturn(registration);
+        when(redisTemplate.opsForValue()).thenReturn(valueOperations);
+        when(valueOperations.decrement("activity:stock:19")).thenReturn(4L);
+
+        activityService.registerActivity(19L, 1L);
+
+        assertEquals("REGISTERED", registration.getStatus());
+        assertEquals(0, registration.getCheckInStatus());
+        assertEquals(0, registration.getHoursConfirmed());
+        assertNull(registration.getCheckInTime());
+        assertNull(registration.getConfirmTime());
+        assertNotNull(registration.getRegistrationTime());
+        verify(registrationMapper).updateById(registration);
+        verify(registrationMapper, never()).insert(any(Registration.class));
+        verify(activityMapper).incrementParticipants(19L);
+    }
+
+    @Test
+    void registerActivityShouldTranslateDuplicateKeyAndRestoreStock() {
+        Activity activity = new Activity();
+        activity.setId(19L);
+        activity.setStatus("RECRUITING");
+        activity.setRegistrationStartTime(LocalDateTime.now().minusHours(1));
+        activity.setRegistrationDeadline(LocalDateTime.now().plusHours(2));
+
+        when(activityMapper.selectById(19L)).thenReturn(activity);
+        when(registrationMapper.selectOne(any())).thenReturn(null);
+        when(redisTemplate.opsForValue()).thenReturn(valueOperations);
+        when(valueOperations.decrement("activity:stock:19")).thenReturn(3L);
+        doThrow(new DuplicateKeyException("duplicate"))
+                .when(registrationMapper)
+                .insert(any(Registration.class));
+
+        org.example.common.exception.BusinessException ex = assertThrows(
+                org.example.common.exception.BusinessException.class,
+                () -> activityService.registerActivity(19L, 1L));
+
+        assertEquals("You have already registered for this activity", ex.getMessage());
+        verify(valueOperations).increment("activity:stock:19");
+        verify(activityMapper, never()).incrementParticipants(19L);
+        ArgumentCaptor<Registration> registrationCaptor = ArgumentCaptor.forClass(Registration.class);
+        verify(registrationMapper).insert(registrationCaptor.capture());
+        Registration insertedRegistration = registrationCaptor.getValue();
+        assertEquals(1L, insertedRegistration.getUserId());
+        assertEquals(19L, insertedRegistration.getActivityId());
+        assertEquals("REGISTERED", insertedRegistration.getStatus());
+    }
+
+    @Test
     void cancelMyRegistrationShouldRejectCheckedInRegistration() {
         Activity activity = new Activity();
         activity.setId(9L);
@@ -228,5 +306,31 @@ class ActivityServiceTest {
         assertEquals(MessagingConstants.ROUTING_USER_UPDATED, outbox.getEventType());
         assertEquals("user", outbox.getAggregateType());
         assertEquals("5", outbox.getAggregateId());
+    }
+
+    @Test
+    void listRegistrationsForAdminShouldEnrichUserDataFromUserService() {
+        RegistrationVO registration = new RegistrationVO();
+        registration.setId(1L);
+        registration.setUserId(5L);
+        registration.setActivityId(9L);
+
+        UserSummary userSummary = new UserSummary();
+        userSummary.setId(5L);
+        userSummary.setUsername("student05");
+        userSummary.setRealName("Chen Qi");
+        userSummary.setStudentNo("2021105");
+        userSummary.setPhone("13800138005");
+
+        when(registrationMapper.selectAllRegistrationsForAdmin()).thenReturn(List.of(registration));
+        when(userServiceClient.listUserSummariesByIds(List.of(5L))).thenReturn(java.util.Map.of(5L, userSummary));
+
+        List<RegistrationVO> result = activityService.listRegistrationsForAdmin(null);
+
+        assertEquals(1, result.size());
+        assertEquals("student05", result.get(0).getUsername());
+        assertEquals("Chen Qi", result.get(0).getRealName());
+        assertEquals("2021105", result.get(0).getStudentNo());
+        assertEquals("13800138005", result.get(0).getPhone());
     }
 }

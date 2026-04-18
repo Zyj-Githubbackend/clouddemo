@@ -1,25 +1,25 @@
--- Add announcement table for existing deployments.
+-- Add announcement tables for split-database deployments.
 -- Usage:
---   docker compose exec -T mysql mysql -uroot -p123888 volunteer_platform < database/migrations/20260411_add_announcement.sql
+--   docker compose exec -T mysql mysql -uroot -p123888 < database/migrations/20260411_add_announcement.sql
 
 SET NAMES utf8mb4;
-USE volunteer_platform;
+USE announcement_service_db;
 
 CREATE TABLE IF NOT EXISTS vol_announcement (
-    id                BIGINT        PRIMARY KEY AUTO_INCREMENT COMMENT '公告ID',
-    title             VARCHAR(200)  NOT NULL COMMENT '公告标题',
-    content           TEXT          NOT NULL COMMENT '公告正文',
-    image_key         TEXT          COMMENT '公告图片对象键列表，逗号分隔',
-    activity_id       BIGINT        COMMENT '关联活动ID，可为空',
-    status            VARCHAR(20)   NOT NULL DEFAULT 'PUBLISHED' COMMENT 'PUBLISHED-已发布, OFFLINE-已下线',
-    sort_order        INT           NOT NULL DEFAULT 0 COMMENT '排序值，越大越靠前',
-    publisher_id      BIGINT        COMMENT '发布管理员ID',
-    publish_time      DATETIME      COMMENT '发布时间',
+    id                BIGINT        PRIMARY KEY AUTO_INCREMENT COMMENT '鍏憡ID',
+    title             VARCHAR(200)  NOT NULL COMMENT '鍏憡鏍囬',
+    content           TEXT          NOT NULL COMMENT '鍏憡姝ｆ枃',
+    image_key         TEXT          COMMENT '鍏憡鍥剧墖瀵硅薄閿垪琛紝閫楀彿鍒嗛殧',
+    activity_id       BIGINT        COMMENT '鍏宠仈娲诲姩ID锛屽彲涓虹┖',
+    status            VARCHAR(20)   NOT NULL DEFAULT 'PUBLISHED' COMMENT 'PUBLISHED-宸插彂甯? OFFLINE-宸蹭笅绾?,
+    sort_order        INT           NOT NULL DEFAULT 0 COMMENT '鎺掑簭鍊硷紝瓒婂ぇ瓒婇潬鍓?,
+    publisher_id      BIGINT        COMMENT '鍙戝竷绠＄悊鍛業D',
+    publish_time      DATETIME      COMMENT '鍙戝竷鏃堕棿',
     create_time       DATETIME      DEFAULT CURRENT_TIMESTAMP,
     update_time       DATETIME      DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
     INDEX idx_status_sort (status, sort_order, publish_time),
     INDEX idx_activity_id (activity_id)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='公告表';
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='鍏憡琛?;
 
 CREATE TABLE IF NOT EXISTS vol_announcement_activity (
     id                BIGINT       PRIMARY KEY AUTO_INCREMENT COMMENT 'ID',
@@ -43,8 +43,8 @@ CREATE TABLE IF NOT EXISTS vol_announcement_attachment (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='Announcement attachments';
 
 INSERT INTO vol_announcement (title, content, image_key, activity_id, status, sort_order, publisher_id, publish_time)
-SELECT '四月志愿服务月安排发布',
-       '四月志愿服务月已开启，图书馆整理、社区清洁、运动会保障等活动将陆续开放报名。请同学们关注活动时间，合理安排课业与志愿服务。',
+SELECT '鍥涙湀蹇楁効鏈嶅姟鏈堝畨鎺掑彂甯?,
+       '鍥涙湀蹇楁効鏈嶅姟鏈堝凡寮€鍚紝鍥句功棣嗘暣鐞嗐€佺ぞ鍖烘竻娲併€佽繍鍔ㄤ細淇濋殰绛夋椿鍔ㄥ皢闄嗙画寮€鏀炬姤鍚嶃€傝鍚屽浠叧娉ㄦ椿鍔ㄦ椂闂达紝鍚堢悊瀹夋帓璇句笟涓庡織鎰挎湇鍔°€?,
        NULL,
        1,
        'PUBLISHED',
@@ -57,8 +57,8 @@ WHERE NOT EXISTS (
 );
 
 INSERT INTO vol_announcement (title, content, image_key, activity_id, status, sort_order, publisher_id, publish_time)
-SELECT '运动会志愿保障招募提醒',
-       '校运会志愿服务岗位包含检录协助、物资搬运、赛道引导和观众秩序维护。报名成功后请保持电话畅通，并按活动详情中的集合时间到场。',
+SELECT '杩愬姩浼氬織鎰夸繚闅滄嫑鍕熸彁閱?,
+       '鏍¤繍浼氬織鎰挎湇鍔″矖浣嶅寘鍚褰曞崗鍔┿€佺墿璧勬惉杩愩€佽禌閬撳紩瀵煎拰瑙備紬绉╁簭缁存姢銆傛姤鍚嶆垚鍔熷悗璇蜂繚鎸佺數璇濈晠閫氾紝骞舵寜娲诲姩璇︽儏涓殑闆嗗悎鏃堕棿鍒板満銆?,
        NULL,
        3,
        'PUBLISHED',
@@ -71,8 +71,8 @@ WHERE NOT EXISTS (
 );
 
 INSERT INTO vol_announcement (title, content, image_key, activity_id, status, sort_order, publisher_id, publish_time)
-SELECT '志愿时长核销说明',
-       '活动结束后，管理员会根据签到情况确认志愿时长。若长时间未核销，请先确认是否已完成签到，再联系活动负责人处理。',
+SELECT '蹇楁効鏃堕暱鏍搁攢璇存槑',
+       '娲诲姩缁撴潫鍚庯紝绠＄悊鍛樹細鏍规嵁绛惧埌鎯呭喌纭蹇楁効鏃堕暱銆傝嫢闀挎椂闂存湭鏍搁攢锛岃鍏堢‘璁ゆ槸鍚﹀凡瀹屾垚绛惧埌锛屽啀鑱旂郴娲诲姩璐熻矗浜哄鐞嗐€?,
        NULL,
        NULL,
        'PUBLISHED',
@@ -85,24 +85,24 @@ WHERE NOT EXISTS (
 );
 
 UPDATE vol_announcement
-SET title = '四月志愿服务月安排发布',
-    content = '四月志愿服务月已开启，图书馆整理、社区清洁、运动会保障等活动将陆续开放报名。请同学们关注活动时间，合理安排课业与志愿服务。',
+SET title = '鍥涙湀蹇楁効鏈嶅姟鏈堝畨鎺掑彂甯?,
+    content = '鍥涙湀蹇楁効鏈嶅姟鏈堝凡寮€鍚紝鍥句功棣嗘暣鐞嗐€佺ぞ鍖烘竻娲併€佽繍鍔ㄤ細淇濋殰绛夋椿鍔ㄥ皢闄嗙画寮€鏀炬姤鍚嶃€傝鍚屽浠叧娉ㄦ椿鍔ㄦ椂闂达紝鍚堢悊瀹夋帓璇句笟涓庡織鎰挎湇鍔°€?,
     image_key = NULL,
     activity_id = 1,
     status = 'PUBLISHED'
 WHERE publisher_id = 1 AND sort_order = 30 AND publish_time = '2026-03-25 09:00:00';
 
 UPDATE vol_announcement
-SET title = '运动会志愿保障招募提醒',
-    content = '校运会志愿服务岗位包含检录协助、物资搬运、赛道引导和观众秩序维护。报名成功后请保持电话畅通，并按活动详情中的集合时间到场。',
+SET title = '杩愬姩浼氬織鎰夸繚闅滄嫑鍕熸彁閱?,
+    content = '鏍¤繍浼氬織鎰挎湇鍔″矖浣嶅寘鍚褰曞崗鍔┿€佺墿璧勬惉杩愩€佽禌閬撳紩瀵煎拰瑙備紬绉╁簭缁存姢銆傛姤鍚嶆垚鍔熷悗璇蜂繚鎸佺數璇濈晠閫氾紝骞舵寜娲诲姩璇︽儏涓殑闆嗗悎鏃堕棿鍒板満銆?,
     image_key = NULL,
     activity_id = 3,
     status = 'PUBLISHED'
 WHERE publisher_id = 1 AND sort_order = 20 AND publish_time = '2026-03-26 10:00:00';
 
 UPDATE vol_announcement
-SET title = '志愿时长核销说明',
-    content = '活动结束后，管理员会根据签到情况确认志愿时长。若长时间未核销，请先确认是否已完成签到，再联系活动负责人处理。',
+SET title = '蹇楁効鏃堕暱鏍搁攢璇存槑',
+    content = '娲诲姩缁撴潫鍚庯紝绠＄悊鍛樹細鏍规嵁绛惧埌鎯呭喌纭蹇楁効鏃堕暱銆傝嫢闀挎椂闂存湭鏍搁攢锛岃鍏堢‘璁ゆ槸鍚﹀凡瀹屾垚绛惧埌锛屽啀鑱旂郴娲诲姩璐熻矗浜哄鐞嗐€?,
     image_key = NULL,
     activity_id = NULL,
     status = 'PUBLISHED'

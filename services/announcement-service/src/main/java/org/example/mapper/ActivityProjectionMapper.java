@@ -2,8 +2,8 @@ package org.example.mapper;
 
 import com.baomidou.mybatisplus.core.mapper.BaseMapper;
 import org.apache.ibatis.annotations.Mapper;
-import org.example.entity.Activity;
+import org.example.entity.ActivityProjection;
 
 @Mapper
-public interface ActivityMapper extends BaseMapper<Activity> {
+public interface ActivityProjectionMapper extends BaseMapper<ActivityProjection> {
 }

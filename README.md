@@ -35,10 +35,10 @@
 源码、部署文件与运行日志当前主要分布如下：
 
 - `services/`：后端 Maven 聚合工程
-- `frontend/`：Vue 3 前端工程
+- `frontend2/`：Vue 3 前端工程
 - `database/init.sql`：数据库初始化与示例数据
 - `database/migrations/`：已有数据库的增量升级脚本
-- `deploy/`：A/B 双栈部署脚本、环境变量文件、edge nginx 构建文件、本机 Nginx 配置
+- `deploy/`：A/B 双栈部署脚本、环境变量文件、edge nginx 构建文件、本机 Nginx 配置、`bootstrap-db.sql`（Docker 一键部署数据库引导与测试数据）
 - `compose.shared.yml`：shared 层（`mysql`、`redis`、`minio`、`mcp-service` 以及 Prometheus / Grafana / Loki / Tempo / OTel / Promtail 等观测组件）
 - `compose.stack.yml`：A/B 栈通用 compose（通过 `--env-file` 区分 stack-a / stack-b）
 - `compose.edge.yml`：统一入口 `edge-nginx`
@@ -61,7 +61,7 @@ mysql -u root -p < database/init.sql
 - `database/init.sql` 会先执行 `DROP DATABASE IF EXISTS volunteer_platform`
 - 脚本会初始化默认账号、20 条活动数据以及报名记录
 - 种子数据围绕 `2026-03-25` 设计，因此不同日期运行时，活动“招募中/未开始/已结束/进行中”的展示会随当前时间动态变化
-- 已有数据库可按需执行 `database/migrations/20260411_add_announcement.sql` 与 `database/migrations/20260411_add_feedback.sql` 补建新表
+- 已有数据库可按需执行 `database/migrations/` 下的增量脚本（含分库迁移、消息表补齐、活动/反馈投影补建）
 
 ### 3.2 启动基础设施
 
@@ -99,7 +99,7 @@ mvn clean install -DskipTests
 开发模式：
 
 ```bash
-cd frontend
+cd frontend2
 npm install
 npm run dev
 ```
@@ -107,7 +107,7 @@ npm run dev
 生产构建：
 
 ```bash
-cd frontend
+cd frontend2
 npm install
 npm run build
 ```
@@ -123,7 +123,7 @@ npm run build
 
 Nginx 路由约定：
 
-- `/` -> `frontend/dist`
+- `/` -> `frontend2/dist`
 - `/api/` -> `http://127.0.0.1:9000/`
 - `/monitor/` -> `http://127.0.0.1:9100/`
 - `/.well-known/*`、`/authorize`、`/token`、`/register`、`/mcp*` -> `http://127.0.0.1:9300`
@@ -161,6 +161,10 @@ powershell -ExecutionPolicy Bypass -File deploy/deploy-all.ps1
 - Docker A/B 模式默认只暴露 `edge-nginx` 的 `8081` 入口，不再直接对宿主机暴露网关、监控、Nacos、MinIO 等内部端口
 - 容器运行期日志统一挂载到仓库根目录 `log/`
 - A/B 栈中 `user-service`、`activity-service`、`announcement-service`、`feedback-service` 的默认副本数已声明在 `compose.stack.yml` + `deploy/stack-a.env` / `deploy/stack-b.env`，普通重建不会再缩回单实例
+- `deploy-all.*` 会自动执行数据库引导（创建分库、账号、核心表、测试数据）并在最后做健康验收（含 A/B 登录冒烟）
+- 默认种子数据（可重复初始化）包含：`11` 个测试账号、`7` 条活动、`13` 条报名记录、`4` 条公告、`3` 条反馈工单
+- 四个服务库都内置 `event_outbox` 与 `mq_consume_record`，用于各服务独立的可靠投递与消费幂等
+- `feedback.created` 事件在 `user-service` 会落地本地投影表 `user_feedback_projection`，不再只是记录消费日志
 - Grafana 默认账号密码：`admin / admin`
 
 ## 5. MCP 接入摘要
@@ -192,7 +196,7 @@ codex mcp login cloud-demo
 
 ## 6. 默认测试账号
 
-`database/init.sql` 内置以下账号，密码均为 `password123`：
+本地 SQL 全量脚本与 Docker 一键部署都内置测试账号，密码均为 `password123`：
 
 | 角色 | 用户名 | 说明 |
 |------|------|------|
@@ -212,8 +216,9 @@ codex mcp login cloud-demo
 - [技术说明](docs/overview/TECHNOLOGY_STACK.md)
 - [项目交付摘要](docs/overview/PROJECT_SUMMARY.md)
 - [验收清单](docs/setup/CHECKLIST.md)
-- [前端快速启动](docs/frontend/QUICKSTART.md)
-- [前端交付摘要](docs/frontend/PROJECT_COMPLETE.md)
+- [前端工程说明](frontend2/README.md)
+- [前端页面清单](docs/ui-page-inventory.md)
+- [Stitch 页面规格](docs/stitch-page-spec.md)
 
 ## 8. 推荐阅读顺序
 

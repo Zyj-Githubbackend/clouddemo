@@ -30,7 +30,8 @@ cloud-demo/
 ├─ docs/
 │  ├─ architecture/
 │  ├─ deploy/
-│  ├─ frontend/
+│  ├─ ui-page-inventory.md
+│  ├─ stitch-page-spec.md
 │  ├─ mcp/
 │  ├─ observability/
 │  ├─ overview/
@@ -54,7 +55,7 @@ cloud-demo/
 │  ├─ up-stack-b.ps1 / up-stack-b.sh
 │  ├─ up-edge.ps1 / up-edge.sh
 │  └─ deploy-all.ps1 / deploy-all.sh
-├─ frontend/
+├─ frontend2/
 │  ├─ dist/                 # 构建产物
 │  ├─ src/
 │  │  ├─ api/
@@ -102,7 +103,7 @@ cloud-demo/
 - `monitor-service/`：Spring Boot Admin 服务端
 - `mcp-service/`：MCP Server 与 OAuth 端点
 
-### `frontend/`
+### `frontend2/`
 
 - Vue 3 前端工程
 - `src/views/` 保存用户端页面和管理员页面
@@ -144,4 +145,4 @@ cloud-demo/
 - `docs/architecture/ARCHITECTURE.md`：系统结构与调用链
 - `docs/testing/API_TEST.md`：接口验证样例
 - `docs/mcp/MCP_CONNECTION.md`：MCP 接入与 OAuth 登录
-- `docs/frontend/*`：前端专项说明
+- `frontend2/README.md`、`docs/ui-page-inventory.md`、`docs/stitch-page-spec.md`：前端专项说明

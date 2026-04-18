@@ -7,8 +7,8 @@ import lombok.Data;
 import java.time.LocalDateTime;
 
 @Data
-@TableName("vol_activity")
-public class Activity {
+@TableName("vol_announcement_activity_projection")
+public class ActivityProjection {
 
     @TableId
     private Long id;
@@ -24,4 +24,8 @@ public class Activity {
     private String status;
 
     private String category;
+
+    private LocalDateTime createTime;
+
+    private LocalDateTime updateTime;
 }

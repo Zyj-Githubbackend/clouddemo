@@ -8,6 +8,8 @@
 node_modules
 frontend/node_modules
 frontend/dist
+frontend2/node_modules
+frontend2/dist
 logs
 log
 **/target

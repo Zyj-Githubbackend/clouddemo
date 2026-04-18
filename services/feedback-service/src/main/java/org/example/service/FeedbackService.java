@@ -3,6 +3,8 @@ package org.example.service;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import org.example.common.exception.BusinessException;
 import org.example.dto.FeedbackAttachmentRequest;
 import org.example.dto.FeedbackCreateRequest;
@@ -64,19 +66,22 @@ public class FeedbackService {
     private final EventOutboxMapper eventOutboxMapper;
     private final MinioStorageService minioStorageService;
     private final IdempotencyHelper idempotencyHelper;
+    private final ObjectMapper objectMapper;
 
     public FeedbackService(FeedbackMapper feedbackMapper,
                            FeedbackMessageMapper messageMapper,
                            FeedbackMessageAttachmentMapper attachmentMapper,
                            EventOutboxMapper eventOutboxMapper,
                            MinioStorageService minioStorageService,
-                           IdempotencyHelper idempotencyHelper) {
+                           IdempotencyHelper idempotencyHelper,
+                           ObjectMapper objectMapper) {
         this.feedbackMapper = feedbackMapper;
         this.messageMapper = messageMapper;
         this.attachmentMapper = attachmentMapper;
         this.eventOutboxMapper = eventOutboxMapper;
         this.minioStorageService = minioStorageService;
         this.idempotencyHelper = idempotencyHelper;
+        this.objectMapper = objectMapper;
     }
 
     @Transactional(rollbackFor = Exception.class)
@@ -124,7 +129,12 @@ public class FeedbackService {
         payload.put("category", feedback.getCategory());
         payload.put("status", feedback.getStatus());
         payload.put("stackId", System.getenv().getOrDefault("STACK_ID", "single"));
-        return payload.toString();
+        payload.put("createdAt", feedback.getCreateTime() == null ? LocalDateTime.now().toString() : feedback.getCreateTime().toString());
+        try {
+            return objectMapper.writeValueAsString(payload);
+        } catch (JsonProcessingException ex) {
+            throw new IllegalStateException("failed to serialize feedback.created payload", ex);
+        }
     }
 
     public IPage<FeedbackVO> listMyFeedback(Integer page, Integer size, String status, Long userId) {

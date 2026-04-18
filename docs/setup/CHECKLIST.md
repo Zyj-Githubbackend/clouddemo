@@ -21,7 +21,7 @@
 
 ## 前端与 Nginx
 
-- [ ] `frontend/dist` 已通过 `npm run build` 生成
+- [ ] `frontend2/dist` 已通过 `npm run build` 生成
 - [ ] Nginx 已成功加载 `deploy/nginx/cloud-demo.local.conf`
 - [ ] `/api/` 已转发到网关
 - [ ] `/announcement/**` 已通过网关转发到 `announcement-service`

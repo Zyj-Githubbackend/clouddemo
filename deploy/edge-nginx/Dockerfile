@@ -5,10 +5,10 @@ FROM ${NODE_IMAGE} AS frontend-build
 
 WORKDIR /app
 
-COPY frontend/package*.json ./
+COPY frontend2/package*.json ./
 RUN npm ci
 
-COPY frontend ./
+COPY frontend2 ./
 RUN npm run build
 
 FROM ${NGINX_IMAGE}

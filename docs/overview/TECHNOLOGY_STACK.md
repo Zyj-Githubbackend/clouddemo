@@ -522,7 +522,7 @@
 
 **证据文件**
 
-- `frontend/package.json`
+- `frontend2/package.json`
 
 **在本项目中的作用**
 
@@ -533,19 +533,19 @@
 
 **证据文件**
 
-- `frontend/package.json`
+- `frontend2/package.json`
 
 **在本项目中的作用**
 
 - 前端开发服务器与构建工具。
-- 开发时提供 `npm run dev`，生产时构建 `frontend/dist` 给 Nginx 托管。
+- 开发时提供 `npm run dev`，生产时构建 `frontend2/dist` 给 Nginx 托管。
 
 ### 8.3 Vue Router
 
 **证据文件**
 
-- `frontend/package.json`
-- `frontend/README.md`
+- `frontend2/package.json`
+- `frontend2/README.md`
 
 **在本项目中的作用**
 
@@ -556,7 +556,7 @@
 
 **证据文件**
 
-- `frontend/package.json`
+- `frontend2/package.json`
 
 **在本项目中的作用**
 
@@ -567,8 +567,8 @@
 
 **证据文件**
 
-- `frontend/package.json`
-- `frontend/README.md`
+- `frontend2/package.json`
+- `frontend2/README.md`
 
 **在本项目中的作用**
 
@@ -579,7 +579,7 @@
 
 **证据文件**
 
-- `frontend/package.json`
+- `frontend2/package.json`
 
 **在本项目中的作用**
 
@@ -590,7 +590,7 @@
 
 **证据文件**
 
-- `frontend/package.json`
+- `frontend2/package.json`
 
 **在本项目中的作用**
 
@@ -601,7 +601,7 @@
 
 **证据文件**
 
-- `frontend/package.json`
+- `frontend2/package.json`
 
 **在本项目中的作用**
 

@@ -6,11 +6,11 @@ import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import org.example.common.exception.BusinessException;
 import org.example.dto.AnnouncementAttachmentRequest;
 import org.example.dto.AnnouncementRequest;
-import org.example.entity.Activity;
+import org.example.entity.ActivityProjection;
 import org.example.entity.Announcement;
 import org.example.entity.AnnouncementActivity;
 import org.example.entity.AnnouncementAttachment;
-import org.example.mapper.ActivityMapper;
+import org.example.mapper.ActivityProjectionMapper;
 import org.example.mapper.AnnouncementActivityMapper;
 import org.example.mapper.AnnouncementAttachmentMapper;
 import org.example.mapper.AnnouncementMapper;
@@ -40,18 +40,18 @@ public class AnnouncementService {
     private final AnnouncementMapper announcementMapper;
     private final AnnouncementActivityMapper announcementActivityMapper;
     private final AnnouncementAttachmentMapper announcementAttachmentMapper;
-    private final ActivityMapper activityMapper;
+    private final ActivityProjectionMapper activityProjectionMapper;
     private final MinioStorageService minioStorageService;
 
     public AnnouncementService(AnnouncementMapper announcementMapper,
                                AnnouncementActivityMapper announcementActivityMapper,
                                AnnouncementAttachmentMapper announcementAttachmentMapper,
-                               ActivityMapper activityMapper,
+                               ActivityProjectionMapper activityProjectionMapper,
                                MinioStorageService minioStorageService) {
         this.announcementMapper = announcementMapper;
         this.announcementActivityMapper = announcementActivityMapper;
         this.announcementAttachmentMapper = announcementAttachmentMapper;
-        this.activityMapper = activityMapper;
+        this.activityProjectionMapper = activityProjectionMapper;
         this.minioStorageService = minioStorageService;
     }
 
@@ -320,8 +320,8 @@ public class AnnouncementService {
             return;
         }
 
-        Map<Long, Activity> activityMap = new HashMap<>();
-        for (Activity activity : activityMapper.selectBatchIds(allActivityIds)) {
+        Map<Long, ActivityProjection> activityMap = new HashMap<>();
+        for (ActivityProjection activity : activityProjectionMapper.selectBatchIds(allActivityIds)) {
             activityMap.put(activity.getId(), activity);
         }
 
@@ -330,7 +330,7 @@ public class AnnouncementService {
             announcement.setActivityIds(new ArrayList<>(ids));
             List<AnnouncementActivityVO> activityVOS = new ArrayList<>();
             for (Long activityId : ids) {
-                Activity activity = activityMap.get(activityId);
+                ActivityProjection activity = activityMap.get(activityId);
                 if (activity == null) {
                     continue;
                 }

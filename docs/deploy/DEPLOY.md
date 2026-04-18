@@ -17,7 +17,7 @@
 ```text
 Browser
   -> edge-nginx (:8081)
-      |- /                  -> frontend/dist (SPA)
+      |- /                  -> frontend2/dist (SPA)
       |- /api/*             -> gateway-a 或 gateway-b (A/B 分流)
       |- /monitor/a/*       -> monitor-a
       |- /monitor/b/*       -> monitor-b

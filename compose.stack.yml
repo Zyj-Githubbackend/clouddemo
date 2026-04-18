@@ -116,6 +116,8 @@ services:
       FEEDBACK_SERVICE_NAME: ${FEEDBACK_SERVICE_NAME}
       JWT_SECRET: ${JWT_SECRET:-volunteerPlatformSecretKey2024}
       JWT_EXPIRATION: ${JWT_EXPIRATION:-86400000}
+      SPRING_DATA_REDIS_HOST: ${SPRING_DATA_REDIS_HOST:-redis}
+      SPRING_DATA_REDIS_PORT: ${SPRING_DATA_REDIS_PORT:-6379}
       MANAGEMENT_ENDPOINT_HEALTH_PROBES_ENABLED: true
     volumes:
       - ./log/${STACK_ID}/gateway-service:/app/logs
@@ -160,9 +162,9 @@ services:
       NACOS_SERVER_ADDR: ${NACOS_SERVER_ADDR}
       SPRING_CLOUD_NACOS_SERVER_ADDR: ${NACOS_SERVER_ADDR}
       SPRING_CLOUD_NACOS_DISCOVERY_SERVER_ADDR: ${NACOS_SERVER_ADDR}
-      SPRING_DATASOURCE_URL: ${SPRING_DATASOURCE_URL:-jdbc:mysql://mysql:3306/volunteer_platform?useUnicode=true&characterEncoding=utf-8&useSSL=false&serverTimezone=Asia/Shanghai&allowPublicKeyRetrieval=true}
-      SPRING_DATASOURCE_USERNAME: ${SPRING_DATASOURCE_USERNAME:-root}
-      SPRING_DATASOURCE_PASSWORD: ${SPRING_DATASOURCE_PASSWORD:-123888}
+      SPRING_DATASOURCE_URL: ${USER_SERVICE_DB_URL:-jdbc:mysql://mysql:3306/user_service_db?useUnicode=true&characterEncoding=utf-8&useSSL=false&serverTimezone=Asia/Shanghai&allowPublicKeyRetrieval=true}
+      SPRING_DATASOURCE_USERNAME: ${USER_SERVICE_DB_USERNAME:-user_service}
+      SPRING_DATASOURCE_PASSWORD: ${USER_SERVICE_DB_PASSWORD:-123888}
       JWT_SECRET: ${JWT_SECRET:-volunteerPlatformSecretKey2024}
       JWT_EXPIRATION: ${JWT_EXPIRATION:-86400000}
       RABBITMQ_HOST: ${RABBITMQ_HOST}
@@ -212,9 +214,9 @@ services:
       NACOS_SERVER_ADDR: ${NACOS_SERVER_ADDR}
       SPRING_CLOUD_NACOS_SERVER_ADDR: ${NACOS_SERVER_ADDR}
       SPRING_CLOUD_NACOS_DISCOVERY_SERVER_ADDR: ${NACOS_SERVER_ADDR}
-      SPRING_DATASOURCE_URL: ${SPRING_DATASOURCE_URL:-jdbc:mysql://mysql:3306/volunteer_platform?useUnicode=true&characterEncoding=utf-8&useSSL=false&serverTimezone=Asia/Shanghai&allowPublicKeyRetrieval=true}
-      SPRING_DATASOURCE_USERNAME: ${SPRING_DATASOURCE_USERNAME:-root}
-      SPRING_DATASOURCE_PASSWORD: ${SPRING_DATASOURCE_PASSWORD:-123888}
+      SPRING_DATASOURCE_URL: ${ACTIVITY_SERVICE_DB_URL:-jdbc:mysql://mysql:3306/activity_service_db?useUnicode=true&characterEncoding=utf-8&useSSL=false&serverTimezone=Asia/Shanghai&allowPublicKeyRetrieval=true}
+      SPRING_DATASOURCE_USERNAME: ${ACTIVITY_SERVICE_DB_USERNAME:-activity_service}
+      SPRING_DATASOURCE_PASSWORD: ${ACTIVITY_SERVICE_DB_PASSWORD:-123888}
       SPRING_DATA_REDIS_HOST: ${SPRING_DATA_REDIS_HOST:-redis}
       SPRING_DATA_REDIS_PORT: ${SPRING_DATA_REDIS_PORT:-6379}
       RABBITMQ_HOST: ${RABBITMQ_HOST}
@@ -269,9 +271,9 @@ services:
       NACOS_SERVER_ADDR: ${NACOS_SERVER_ADDR}
       SPRING_CLOUD_NACOS_SERVER_ADDR: ${NACOS_SERVER_ADDR}
       SPRING_CLOUD_NACOS_DISCOVERY_SERVER_ADDR: ${NACOS_SERVER_ADDR}
-      SPRING_DATASOURCE_URL: ${SPRING_DATASOURCE_URL:-jdbc:mysql://mysql:3306/volunteer_platform?useUnicode=true&characterEncoding=utf-8&useSSL=false&serverTimezone=Asia/Shanghai&allowPublicKeyRetrieval=true}
-      SPRING_DATASOURCE_USERNAME: ${SPRING_DATASOURCE_USERNAME:-root}
-      SPRING_DATASOURCE_PASSWORD: ${SPRING_DATASOURCE_PASSWORD:-123888}
+      SPRING_DATASOURCE_URL: ${ANNOUNCEMENT_SERVICE_DB_URL:-jdbc:mysql://mysql:3306/announcement_service_db?useUnicode=true&characterEncoding=utf-8&useSSL=false&serverTimezone=Asia/Shanghai&allowPublicKeyRetrieval=true}
+      SPRING_DATASOURCE_USERNAME: ${ANNOUNCEMENT_SERVICE_DB_USERNAME:-announcement_service}
+      SPRING_DATASOURCE_PASSWORD: ${ANNOUNCEMENT_SERVICE_DB_PASSWORD:-123888}
       RABBITMQ_HOST: ${RABBITMQ_HOST}
       SPRING_RABBITMQ_HOST: ${RABBITMQ_HOST}
       SPRING_RABBITMQ_PORT: ${SPRING_RABBITMQ_PORT:-5672}
@@ -323,9 +325,9 @@ services:
       NACOS_SERVER_ADDR: ${NACOS_SERVER_ADDR}
       SPRING_CLOUD_NACOS_SERVER_ADDR: ${NACOS_SERVER_ADDR}
       SPRING_CLOUD_NACOS_DISCOVERY_SERVER_ADDR: ${NACOS_SERVER_ADDR}
-      SPRING_DATASOURCE_URL: ${SPRING_DATASOURCE_URL:-jdbc:mysql://mysql:3306/volunteer_platform?useUnicode=true&characterEncoding=utf-8&useSSL=false&serverTimezone=Asia/Shanghai&allowPublicKeyRetrieval=true}
-      SPRING_DATASOURCE_USERNAME: ${SPRING_DATASOURCE_USERNAME:-root}
-      SPRING_DATASOURCE_PASSWORD: ${SPRING_DATASOURCE_PASSWORD:-123888}
+      SPRING_DATASOURCE_URL: ${FEEDBACK_SERVICE_DB_URL:-jdbc:mysql://mysql:3306/feedback_service_db?useUnicode=true&characterEncoding=utf-8&useSSL=false&serverTimezone=Asia/Shanghai&allowPublicKeyRetrieval=true}
+      SPRING_DATASOURCE_USERNAME: ${FEEDBACK_SERVICE_DB_USERNAME:-feedback_service}
+      SPRING_DATASOURCE_PASSWORD: ${FEEDBACK_SERVICE_DB_PASSWORD:-123888}
       RABBITMQ_HOST: ${RABBITMQ_HOST}
       SPRING_RABBITMQ_HOST: ${RABBITMQ_HOST}
       SPRING_RABBITMQ_PORT: ${SPRING_RABBITMQ_PORT:-5672}

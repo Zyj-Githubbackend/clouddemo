@@ -28,7 +28,7 @@
 | `services/gateway-service` | 统一入口、JWT 鉴权、请求头透传 |
 | `services/monitor-service` | Spring Boot Admin 监控中心 |
 | `services/mcp-service` | 独立 MCP Server，封装用户、活动、公告与意见反馈相关工具 |
-| `frontend` | Vue 3 前端页面与后台管理界面 |
+| `frontend2` | Vue 3 前端页面与后台管理界面 |
 | `database/init.sql` | 数据库结构、默认账号、活动与报名示例数据 |
 | `deploy/` | 本机 Nginx、edge nginx、A/B 栈环境文件与启动脚本 |
 | `deploy/observability/` | Prometheus、Promtail、Tempo、Loki、Grafana、OTel Collector 配置 |

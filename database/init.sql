@@ -13,8 +13,33 @@
 SET NAMES utf8mb4;
 
 DROP DATABASE IF EXISTS volunteer_platform;
-CREATE DATABASE volunteer_platform CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
-USE volunteer_platform;
+DROP DATABASE IF EXISTS user_service_db;
+DROP DATABASE IF EXISTS activity_service_db;
+DROP DATABASE IF EXISTS announcement_service_db;
+DROP DATABASE IF EXISTS feedback_service_db;
+
+CREATE DATABASE user_service_db CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+CREATE DATABASE activity_service_db CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+CREATE DATABASE announcement_service_db CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+CREATE DATABASE feedback_service_db CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+
+DROP USER IF EXISTS 'user_service'@'%';
+DROP USER IF EXISTS 'activity_service'@'%';
+DROP USER IF EXISTS 'announcement_service'@'%';
+DROP USER IF EXISTS 'feedback_service'@'%';
+
+CREATE USER 'user_service'@'%' IDENTIFIED BY '123888';
+CREATE USER 'activity_service'@'%' IDENTIFIED BY '123888';
+CREATE USER 'announcement_service'@'%' IDENTIFIED BY '123888';
+CREATE USER 'feedback_service'@'%' IDENTIFIED BY '123888';
+
+GRANT ALL PRIVILEGES ON user_service_db.* TO 'user_service'@'%';
+GRANT ALL PRIVILEGES ON activity_service_db.* TO 'activity_service'@'%';
+GRANT ALL PRIVILEGES ON announcement_service_db.* TO 'announcement_service'@'%';
+GRANT ALL PRIVILEGES ON feedback_service_db.* TO 'feedback_service'@'%';
+FLUSH PRIVILEGES;
+
+USE user_service_db;
 
 -- ==============================================================================
 -- 1. 用户表
@@ -39,6 +64,50 @@ CREATE TABLE sys_user (
 -- ==============================================================================
 -- 2. 志愿活动表
 -- ==============================================================================
+USE user_service_db;
+
+CREATE TABLE mq_consume_record (
+    id            BIGINT PRIMARY KEY AUTO_INCREMENT COMMENT 'Consume record ID',
+    message_id    VARCHAR(64)  NOT NULL COMMENT 'Message ID',
+    consumer_name VARCHAR(120) NOT NULL COMMENT 'Consumer name',
+    status        VARCHAR(20)  NOT NULL DEFAULT 'CONSUMED' COMMENT 'Consume status',
+    consumed_at   DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    UNIQUE KEY uk_message_consumer (message_id, consumer_name),
+    KEY idx_consumer_time (consumer_name, consumed_at)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='MQ consume idempotency records';
+
+CREATE TABLE event_outbox (
+    id              BIGINT PRIMARY KEY AUTO_INCREMENT COMMENT 'Outbox ID',
+    message_id      VARCHAR(64)  NOT NULL COMMENT 'Business message ID',
+    event_type      VARCHAR(100) NOT NULL COMMENT 'Event type',
+    aggregate_type  VARCHAR(100) NOT NULL COMMENT 'Aggregate type',
+    aggregate_id    VARCHAR(100) NOT NULL COMMENT 'Aggregate ID',
+    payload_json    LONGTEXT     NOT NULL COMMENT 'Event payload JSON',
+    status          VARCHAR(20)  NOT NULL DEFAULT 'PENDING' COMMENT 'PENDING/SENT/FAILED',
+    retry_count     INT          NOT NULL DEFAULT 0 COMMENT 'Retry count',
+    next_retry_time DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT 'Next retry time',
+    created_at      DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    sent_at         DATETIME     NULL,
+    UNIQUE KEY uk_message_id (message_id),
+    KEY idx_status_next_retry (status, next_retry_time)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='Transactional outbox events';
+
+CREATE TABLE user_feedback_projection (
+    feedback_id       BIGINT       PRIMARY KEY COMMENT 'Feedback ID from feedback-service',
+    user_id           BIGINT       NOT NULL COMMENT 'Feedback owner user ID',
+    title             VARCHAR(200) NOT NULL COMMENT 'Feedback title snapshot',
+    category          VARCHAR(30)  NOT NULL COMMENT 'Feedback category snapshot',
+    status            VARCHAR(30)  NOT NULL COMMENT 'Feedback status snapshot',
+    source_message_id VARCHAR(64)  COMMENT 'Last source MQ message ID',
+    created_at        DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at        DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    INDEX idx_user_feedback_user (user_id),
+    INDEX idx_user_feedback_status (status),
+    INDEX idx_user_feedback_updated (updated_at)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='User-service local projection of feedback tickets';
+
+USE activity_service_db;
+
 CREATE TABLE vol_activity (
     id                      BIGINT        PRIMARY KEY AUTO_INCREMENT COMMENT '活动ID',
     title                   VARCHAR(200)  NOT NULL COMMENT '活动标题',
@@ -67,6 +136,8 @@ CREATE TABLE vol_activity (
 -- ==============================================================================
 -- 3. 公告表
 -- ==============================================================================
+USE announcement_service_db;
+
 CREATE TABLE vol_announcement (
     id               BIGINT        PRIMARY KEY AUTO_INCREMENT COMMENT '公告ID',
     title            VARCHAR(200)  NOT NULL COMMENT '公告标题',
@@ -106,6 +177,48 @@ CREATE TABLE vol_announcement_attachment (
     create_time       DATETIME      DEFAULT CURRENT_TIMESTAMP,
     INDEX idx_announcement_id (announcement_id)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='Announcement attachments';
+
+CREATE TABLE vol_announcement_activity_projection (
+    id                BIGINT        PRIMARY KEY COMMENT 'Activity ID copied from activity-service',
+    title             VARCHAR(200)  NOT NULL COMMENT 'Activity title snapshot',
+    location          VARCHAR(200)  COMMENT 'Activity location snapshot',
+    start_time        DATETIME      COMMENT 'Activity start time snapshot',
+    end_time          DATETIME      COMMENT 'Activity end time snapshot',
+    status            VARCHAR(20)   COMMENT 'Activity status snapshot',
+    category          VARCHAR(50)   COMMENT 'Activity category snapshot',
+    create_time       DATETIME      DEFAULT CURRENT_TIMESTAMP,
+    update_time       DATETIME      DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    INDEX idx_projection_status (status),
+    INDEX idx_projection_start_time (start_time)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='Announcement local projection of activities';
+
+CREATE TABLE mq_consume_record (
+    id            BIGINT PRIMARY KEY AUTO_INCREMENT COMMENT 'Consume record ID',
+    message_id    VARCHAR(64)  NOT NULL COMMENT 'Message ID',
+    consumer_name VARCHAR(120) NOT NULL COMMENT 'Consumer name',
+    status        VARCHAR(20)  NOT NULL DEFAULT 'CONSUMED' COMMENT 'Consume status',
+    consumed_at   DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    UNIQUE KEY uk_message_consumer (message_id, consumer_name),
+    KEY idx_consumer_time (consumer_name, consumed_at)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='MQ consume idempotency records';
+
+CREATE TABLE event_outbox (
+    id              BIGINT PRIMARY KEY AUTO_INCREMENT COMMENT 'Outbox ID',
+    message_id      VARCHAR(64)  NOT NULL COMMENT 'Business message ID',
+    event_type      VARCHAR(100) NOT NULL COMMENT 'Event type',
+    aggregate_type  VARCHAR(100) NOT NULL COMMENT 'Aggregate type',
+    aggregate_id    VARCHAR(100) NOT NULL COMMENT 'Aggregate ID',
+    payload_json    LONGTEXT     NOT NULL COMMENT 'Event payload JSON',
+    status          VARCHAR(20)  NOT NULL DEFAULT 'PENDING' COMMENT 'PENDING/SENT/FAILED',
+    retry_count     INT          NOT NULL DEFAULT 0 COMMENT 'Retry count',
+    next_retry_time DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT 'Next retry time',
+    created_at      DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    sent_at         DATETIME     NULL,
+    UNIQUE KEY uk_message_id (message_id),
+    KEY idx_status_next_retry (status, next_retry_time)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='Transactional outbox events';
+
+USE activity_service_db;
 
 CREATE TABLE vol_registration (
     id                BIGINT    PRIMARY KEY AUTO_INCREMENT COMMENT '报名ID',
@@ -156,6 +269,8 @@ CREATE TABLE mq_consume_record (
 -- ==============================================================================
 -- 6. 活动统计视图（供 BI / 报表使用，应用服务层不直接查询此视图）
 -- ==============================================================================
+USE activity_service_db;
+
 CREATE VIEW v_activity_statistics AS
 SELECT
     a.id,
@@ -179,6 +294,8 @@ GROUP BY a.id, a.title, a.category, a.status, a.max_participants,
 -- 7. 测试数据 — 用户（1 管理员 + 10 志愿者）
 --    密码均为 password123（此处已使用 BCrypt 哈希存储；同一明文每行哈希不同属正常现象；生产可配合密码策略）
 -- ==============================================================================
+USE user_service_db;
+
 INSERT INTO sys_user (username, password, real_name, student_no, phone, email, role, total_volunteer_hours) VALUES
 ('admin',     '$2a$10$Eo9wO/cEgteDMRV7ApcPbuxTGF.VUKK6yyfzuLyKPBHdwGVvQtKEG', '管理员',   '2021000', '13800138000', 'admin@university.edu',     'ADMIN',     0.00),
 ('student01', '$2a$10$0QNp9cTcnPH3.VA0nRZSMOOUXv2B.cLrH.YLufbmm4iSHh.VIqoqu', '张三',     '2021101', '13800138001', 'zhangsan@university.edu',  'VOLUNTEER', 11.0),
@@ -203,6 +320,8 @@ INSERT INTO sys_user (username, password, real_name, student_no, phone, email, r
 --    活动19：已结项（COMPLETED）
 --    活动20：已取消（CANCELLED）
 -- ==============================================================================
+USE activity_service_db;
+
 INSERT INTO vol_activity (title, description, location, max_participants, current_participants, volunteer_hours,
     start_time, end_time, registration_start_time, registration_deadline, status, category, creator_id) VALUES
 
@@ -356,6 +475,12 @@ INSERT INTO vol_activity (title, description, location, max_participants, curren
 -- ==============================================================================
 -- 8. 测试数据 — 公告
 -- ==============================================================================
+USE announcement_service_db;
+
+INSERT INTO vol_announcement_activity_projection (id, title, location, start_time, end_time, status, category)
+SELECT id, title, location, start_time, end_time, status, category
+FROM activity_service_db.vol_activity;
+
 INSERT INTO vol_announcement (title, content, image_key, activity_id, status, sort_order, publisher_id, publish_time) VALUES
 ('四月志愿服务月安排发布',
  '四月志愿服务月已经开启。请同学们关注招募截止时间，优先选择与课程安排不冲突的活动，并在活动开始前完成报名确认。',
@@ -382,6 +507,8 @@ WHERE activity_id IS NOT NULL;
 -- ==============================================================================
 
 -- 活动1（招募中，2人报名）
+USE activity_service_db;
+
 INSERT INTO vol_registration (user_id, activity_id, registration_time, check_in_status, hours_confirmed, status) VALUES
 (2,  1, '2026-03-10 10:00:00', 0, 0, 'REGISTERED'),
 (3,  1, '2026-03-11 11:00:00', 0, 0, 'REGISTERED');
@@ -537,6 +664,8 @@ INSERT INTO vol_registration (user_id, activity_id, registration_time, check_in_
 -- ==============================================================================
 -- 10. Feedback ticket tables
 -- ==============================================================================
+USE feedback_service_db;
+
 CREATE TABLE feedback (
     id                 BIGINT        PRIMARY KEY AUTO_INCREMENT,
     user_id            BIGINT        NOT NULL,
@@ -582,3 +711,48 @@ CREATE TABLE feedback_message_attachment (
     INDEX idx_feedback_attachment_message (message_id),
     UNIQUE KEY uk_feedback_attachment_object_key (object_key)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='Feedback message attachments';
+
+CREATE TABLE event_outbox (
+    id              BIGINT PRIMARY KEY AUTO_INCREMENT COMMENT 'Outbox ID',
+    message_id      VARCHAR(64)  NOT NULL COMMENT 'Business message ID',
+    event_type      VARCHAR(100) NOT NULL COMMENT 'Event type',
+    aggregate_type  VARCHAR(100) NOT NULL COMMENT 'Aggregate type',
+    aggregate_id    VARCHAR(100) NOT NULL COMMENT 'Aggregate ID',
+    payload_json    LONGTEXT     NOT NULL COMMENT 'Event payload JSON',
+    status          VARCHAR(20)  NOT NULL DEFAULT 'PENDING' COMMENT 'PENDING/SENT/FAILED',
+    retry_count     INT          NOT NULL DEFAULT 0 COMMENT 'Retry count',
+    next_retry_time DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT 'Next retry time',
+    created_at      DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    sent_at         DATETIME     NULL,
+    UNIQUE KEY uk_message_id (message_id),
+    KEY idx_status_next_retry (status, next_retry_time)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='Transactional outbox events';
+
+CREATE TABLE mq_consume_record (
+    id            BIGINT PRIMARY KEY AUTO_INCREMENT COMMENT 'Consume record ID',
+    message_id    VARCHAR(64)  NOT NULL COMMENT 'Message ID',
+    consumer_name VARCHAR(120) NOT NULL COMMENT 'Consumer name',
+    status        VARCHAR(20)  NOT NULL DEFAULT 'CONSUMED' COMMENT 'Consume status',
+    consumed_at   DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    UNIQUE KEY uk_message_consumer (message_id, consumer_name),
+    KEY idx_consumer_time (consumer_name, consumed_at)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='MQ consume idempotency records';
+
+INSERT INTO user_service_db.user_feedback_projection
+    (feedback_id, user_id, title, category, status, source_message_id, created_at, updated_at)
+SELECT
+    f.id,
+    f.user_id,
+    f.title,
+    f.category,
+    f.status,
+    NULL,
+    COALESCE(f.create_time, NOW()),
+    COALESCE(f.update_time, NOW())
+FROM feedback_service_db.feedback f
+ON DUPLICATE KEY UPDATE
+    user_id = VALUES(user_id),
+    title = VALUES(title),
+    category = VALUES(category),
+    status = VALUES(status),
+    updated_at = VALUES(updated_at);

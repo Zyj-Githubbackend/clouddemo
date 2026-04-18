@@ -9,6 +9,8 @@ public final class MessagingConstants {
     public static final String EVENT_DLX_EXCHANGE = "volunteer.events.dlx.exchange";
 
     public static final String ROUTING_ACTIVITY_CREATED = "activity.created";
+    public static final String ROUTING_ACTIVITY_UPSERTED = "activity.upserted";
+    public static final String ROUTING_ACTIVITY_DELETED = "activity.deleted";
     public static final String ROUTING_ANNOUNCEMENT_PUBLISHED = "announcement.published";
     public static final String ROUTING_FEEDBACK_CREATED = "feedback.created";
     public static final String ROUTING_USER_UPDATED = "user.updated";

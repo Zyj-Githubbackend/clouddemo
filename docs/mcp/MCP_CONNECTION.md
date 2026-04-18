@@ -433,6 +433,6 @@ Invoke-RestMethod -Method Post -Uri "http://localhost/mcp/auth/login" -ContentTy
 - [services/mcp-service/src/main/java/org/example/mcp/auth/McpAccessTokenFilter.java](../../services/mcp-service/src/main/java/org/example/mcp/auth/McpAccessTokenFilter.java)
 - [services/mcp-service/src/main/resources/application.properties](../../services/mcp-service/src/main/resources/application.properties)
 - [deploy/nginx/cloud-demo.local.conf](../../deploy/nginx/cloud-demo.local.conf)
-- [frontend/nginx.docker.conf](../../frontend/nginx.docker.conf)
+- [frontend2/nginx.docker.conf](../../frontend2/nginx.docker.conf)
 - [scripts/mcp-login.ps1](../../scripts/mcp-login.ps1)
 - [scripts/mcp-print-token.ps1](../../scripts/mcp-print-token.ps1)

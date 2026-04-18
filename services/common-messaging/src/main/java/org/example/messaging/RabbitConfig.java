@@ -40,6 +40,8 @@ public class RabbitConfig {
         Queue userDlq = QueueBuilder.durable(MessagingConstants.DLQ_USER_UPDATED).build();
 
         Binding activityBinding = BindingBuilder.bind(activityQueue).to(eventExchange()).with(MessagingConstants.ROUTING_ACTIVITY_CREATED);
+        Binding activityUpsertedBinding = BindingBuilder.bind(activityQueue).to(eventExchange()).with(MessagingConstants.ROUTING_ACTIVITY_UPSERTED);
+        Binding activityDeletedBinding = BindingBuilder.bind(activityQueue).to(eventExchange()).with(MessagingConstants.ROUTING_ACTIVITY_DELETED);
         Binding announcementBinding = BindingBuilder.bind(announcementQueue).to(eventExchange()).with(MessagingConstants.ROUTING_ANNOUNCEMENT_PUBLISHED);
         Binding feedbackBinding = BindingBuilder.bind(feedbackQueue).to(eventExchange()).with(MessagingConstants.ROUTING_FEEDBACK_CREATED);
         Binding userBinding = BindingBuilder.bind(userQueue).to(eventExchange()).with(MessagingConstants.ROUTING_USER_UPDATED);
@@ -59,6 +61,8 @@ public class RabbitConfig {
                 feedbackDlq,
                 userDlq,
                 activityBinding,
+                activityUpsertedBinding,
+                activityDeletedBinding,
                 announcementBinding,
                 feedbackBinding,
                 userBinding,
