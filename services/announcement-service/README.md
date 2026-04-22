@@ -56,6 +56,6 @@
 
 ## 日志
 
-- 默认本机日志文件：`../../announcement-service/logs/debug.log`
+- 默认本机日志文件：按运行方式决定，可通过 `APP_LOG_FILE` 覆盖
 - Docker 日志文件：`/app/logs/debug.log`
-- Compose 挂载目录：`./announcement-service/logs`
+- Docker 单栈日志挂载目录：`log/docker/announcement-service/`

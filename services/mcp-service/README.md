@@ -149,9 +149,9 @@ mvn -pl services/mcp-service spring-boot:run
 
 当前模块已对齐其他后端模块的日志配置：
 
-- 默认本机日志文件：`../../mcp-service/logs/debug.log`
+- 默认本机日志文件：按运行方式决定，可通过 `APP_LOG_FILE` 覆盖
 - Docker 日志文件：`/app/logs/debug.log`
-- Compose 挂载目录：`./mcp-service/logs`
+- Docker 单栈挂载目录：`log/docker/mcp-service/`
 - 日志包含 `traceId`、请求方法、路径、状态码、耗时、用户信息与远端 IP
 
 可通过 `APP_LOG_FILE` 覆盖日志文件位置。

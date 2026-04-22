@@ -1,0 +1,35 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: cloud-demo-shared-config
+  namespace: cloud-demo
+data:
+  TZ: Asia/Shanghai
+  NACOS_SERVER_ADDR: "nacos:8848"
+  USER_SERVICE_NAME: user-service
+  ACTIVITY_SERVICE_NAME: activity-service
+  ANNOUNCEMENT_SERVICE_NAME: announcement-service
+  FEEDBACK_SERVICE_NAME: feedback-service
+  GATEWAY_NAME: gateway-service
+  MONITOR_NAME: monitor-service
+  RABBITMQ_HOST: rabbitmq
+  SPRING_RABBITMQ_PORT: "5672"
+  SPRING_DATA_REDIS_HOST: redis
+  SPRING_DATA_REDIS_PORT: "6379"
+  SPRING_DATA_REDIS_DATABASE: "0"
+  MINIO_ENDPOINT: "http://minio:9000"
+  MINIO_BUCKET: activity-images
+  MINIO_PUBLIC_BASE_URL: /api
+  MANAGEMENT_OTLP_TRACING_ENDPOINT: "http://otel-collector.observability.svc.cluster.local:4318/v1/traces"
+  MCP_SERVICE_BASE_URL: "http://mcp-service:9300"
+  CLOUD_DEMO_API_BASE_URL: "http://gateway-service:9000"
+  MONITOR_SERVICE_URL: "http://monitor-service:9100"
+  CLOUD_DEMO_MCP_AUTH_CODE_PREFIX: "mcp:authorization-code:"
+  USER_SERVICE_DB_URL: "jdbc:mysql://mysql:3306/user_service_db?useUnicode=true&characterEncoding=utf-8&useSSL=false&serverTimezone=Asia/Shanghai&allowPublicKeyRetrieval=true"
+  ACTIVITY_SERVICE_DB_URL: "jdbc:mysql://mysql:3306/activity_service_db?useUnicode=true&characterEncoding=utf-8&useSSL=false&serverTimezone=Asia/Shanghai&allowPublicKeyRetrieval=true"
+  ANNOUNCEMENT_SERVICE_DB_URL: "jdbc:mysql://mysql:3306/announcement_service_db?useUnicode=true&characterEncoding=utf-8&useSSL=false&serverTimezone=Asia/Shanghai&allowPublicKeyRetrieval=true"
+  FEEDBACK_SERVICE_DB_URL: "jdbc:mysql://mysql:3306/feedback_service_db?useUnicode=true&characterEncoding=utf-8&useSSL=false&serverTimezone=Asia/Shanghai&allowPublicKeyRetrieval=true"
+  USER_SERVICE_DB_USERNAME: user_service
+  ACTIVITY_SERVICE_DB_USERNAME: activity_service
+  ANNOUNCEMENT_SERVICE_DB_USERNAME: announcement_service
+  FEEDBACK_SERVICE_DB_USERNAME: feedback_service

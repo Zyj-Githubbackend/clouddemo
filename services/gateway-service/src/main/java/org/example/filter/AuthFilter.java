@@ -26,16 +26,19 @@ public class AuthFilter implements GlobalFilter, Ordered {
 
     private static final Logger log = LoggerFactory.getLogger(AuthFilter.class);
     private static final List<String> WHITE_LIST = Arrays.asList(
-            "/user/login",
-            "/user/register",
-            "/activity/list",
-            "/activity/image",
-            "/announcement/home",
-            "/announcement/list",
-            "/announcement/image",
-            "/announcement/attachment"
+            "/api/user/login",
+            "/api/user/register",
+            "/api/activity/list",
+            "/api/activity/image",
+            "/api/announcement/home",
+            "/api/announcement/list",
+            "/api/announcement/image",
+            "/api/announcement/attachment",
+            "/fallback/"
     );
     private static final String TRACE_HEADER = "X-Trace-Id";
+    private static final String DEFAULT_STACK_ID = System.getenv().getOrDefault("STACK_ID", "single");
+    private static final String DEFAULT_SERVICE_NAME = System.getenv().getOrDefault("SERVICE_NAME", "gateway-service");
 
     @Override
     public Mono<Void> filter(ServerWebExchange exchange, GatewayFilterChain chain) {
@@ -114,7 +117,11 @@ public class AuthFilter implements GlobalFilter, Ordered {
         long durationMs = System.currentTimeMillis() - startTime;
         HttpStatusCode status = exchange.getResponse().getStatusCode();
         log.info(
-                "gateway request completed method={} path={} status={} durationMs={} traceId={} userId={} role={}",
+                "gateway request completed stackId={} serviceName={} eventType={} messageId={} method={} path={} status={} durationMs={} traceId={} userId={} role={}",
+                DEFAULT_STACK_ID,
+                DEFAULT_SERVICE_NAME,
+                "http.request",
+                traceId,
                 exchange.getRequest().getMethod(),
                 path,
                 status != null ? status.value() : 200,

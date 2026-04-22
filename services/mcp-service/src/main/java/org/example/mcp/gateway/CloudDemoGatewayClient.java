@@ -1,6 +1,9 @@
 package org.example.mcp.gateway;
 
 import com.fasterxml.jackson.databind.JsonNode;
+import io.github.resilience4j.bulkhead.annotation.Bulkhead;
+import io.github.resilience4j.circuitbreaker.annotation.CircuitBreaker;
+import io.github.resilience4j.retry.annotation.Retry;
 import org.example.mcp.config.CloudDemoApiProperties;
 import org.springframework.core.io.ByteArrayResource;
 import org.springframework.http.HttpEntity;
@@ -17,6 +20,8 @@ import org.springframework.web.client.RestTemplate;
 import org.springframework.web.util.UriComponentsBuilder;
 
 import java.net.URI;
+import java.util.LinkedHashMap;
+import java.util.Map;
 
 @Component
 public class CloudDemoGatewayClient {
@@ -29,10 +34,13 @@ public class CloudDemoGatewayClient {
         this.properties = properties;
     }
 
+    @Retry(name = "gatewayClient", fallbackMethod = "fallbackGet")
+    @CircuitBreaker(name = "gatewayClient")
+    @Bulkhead(name = "gatewayClient", type = Bulkhead.Type.SEMAPHORE)
     public JsonNode get(String path, MultiValueMap<String, String> queryParams, String bearerToken) {
         URI uri = UriComponentsBuilder
                 .fromHttpUrl(properties.baseUrl())
-                .path(path)
+                .path(normalizePath(path))
                 .queryParams(queryParams != null ? queryParams : new LinkedMultiValueMap<>())
                 .build(true)
                 .toUri();
@@ -40,36 +48,48 @@ public class CloudDemoGatewayClient {
         return exchange(uri, HttpMethod.GET, null, bearerToken);
     }
 
+    @Retry(name = "gatewayClient", fallbackMethod = "fallbackPost")
+    @CircuitBreaker(name = "gatewayClient")
+    @Bulkhead(name = "gatewayClient", type = Bulkhead.Type.SEMAPHORE)
     public JsonNode post(String path, Object body, String bearerToken) {
         URI uri = UriComponentsBuilder
                 .fromHttpUrl(properties.baseUrl())
-                .path(path)
+                .path(normalizePath(path))
                 .build(true)
                 .toUri();
 
         return exchange(uri, HttpMethod.POST, body, bearerToken);
     }
 
+    @Retry(name = "gatewayClient", fallbackMethod = "fallbackPut")
+    @CircuitBreaker(name = "gatewayClient")
+    @Bulkhead(name = "gatewayClient", type = Bulkhead.Type.SEMAPHORE)
     public JsonNode put(String path, Object body, String bearerToken) {
         URI uri = UriComponentsBuilder
                 .fromHttpUrl(properties.baseUrl())
-                .path(path)
+                .path(normalizePath(path))
                 .build(true)
                 .toUri();
 
         return exchange(uri, HttpMethod.PUT, body, bearerToken);
     }
 
+    @Retry(name = "gatewayClient", fallbackMethod = "fallbackDelete")
+    @CircuitBreaker(name = "gatewayClient")
+    @Bulkhead(name = "gatewayClient", type = Bulkhead.Type.SEMAPHORE)
     public JsonNode delete(String path, String bearerToken) {
         URI uri = UriComponentsBuilder
                 .fromHttpUrl(properties.baseUrl())
-                .path(path)
+                .path(normalizePath(path))
                 .build(true)
                 .toUri();
 
         return exchange(uri, HttpMethod.DELETE, null, bearerToken);
     }
 
+    @Retry(name = "gatewayClient", fallbackMethod = "fallbackPostMultipart")
+    @CircuitBreaker(name = "gatewayClient")
+    @Bulkhead(name = "gatewayClient", type = Bulkhead.Type.SEMAPHORE)
     public JsonNode postMultipart(String path,
                                   String partName,
                                   byte[] content,
@@ -78,7 +98,7 @@ public class CloudDemoGatewayClient {
                                   String bearerToken) {
         URI uri = UriComponentsBuilder
                 .fromHttpUrl(properties.baseUrl())
-                .path(path)
+                .path(normalizePath(path))
                 .build(true)
                 .toUri();
 
@@ -125,10 +145,13 @@ public class CloudDemoGatewayClient {
         }
     }
 
+    @Retry(name = "gatewayClient", fallbackMethod = "fallbackGetBinary")
+    @CircuitBreaker(name = "gatewayClient")
+    @Bulkhead(name = "gatewayClient", type = Bulkhead.Type.SEMAPHORE)
     public GatewayBinaryResponse getBinary(String path, MultiValueMap<String, String> queryParams, String bearerToken) {
         URI uri = UriComponentsBuilder
                 .fromHttpUrl(properties.baseUrl())
-                .path(path)
+                .path(normalizePath(path))
                 .queryParams(queryParams != null ? queryParams : new LinkedMultiValueMap<>())
                 .build(true)
                 .toUri();
@@ -205,6 +228,85 @@ public class CloudDemoGatewayClient {
             return bearerToken.substring(7).trim();
         }
         return bearerToken.trim();
+    }
+
+    private String normalizePath(String path) {
+        if (path == null || path.isBlank() || "/".equals(path.trim())) {
+            return "/api";
+        }
+        String normalized = path.startsWith("/") ? path : "/" + path;
+        if (normalized.startsWith("/api/")) {
+            return normalized;
+        }
+        if ("/api".equals(normalized)) {
+            return normalized;
+        }
+        return "/api" + normalized;
+    }
+
+    private JsonNode fallbackGet(String path,
+                                 MultiValueMap<String, String> queryParams,
+                                 String bearerToken,
+                                 Throwable throwable) {
+        LinkedHashMap<String, Object> details = new LinkedHashMap<>();
+        details.put("queryParams", queryParams == null ? Map.of() : queryParams);
+        details.put("hasBearerToken", bearerToken != null && !bearerToken.isBlank());
+        throw gatewayUnavailable("GET", path, throwable, details);
+    }
+
+    private JsonNode fallbackPost(String path, Object body, String bearerToken, Throwable throwable) {
+        LinkedHashMap<String, Object> details = new LinkedHashMap<>();
+        details.put("hasBody", body != null);
+        details.put("hasBearerToken", bearerToken != null && !bearerToken.isBlank());
+        throw gatewayUnavailable("POST", path, throwable, details);
+    }
+
+    private JsonNode fallbackPut(String path, Object body, String bearerToken, Throwable throwable) {
+        LinkedHashMap<String, Object> details = new LinkedHashMap<>();
+        details.put("hasBody", body != null);
+        details.put("hasBearerToken", bearerToken != null && !bearerToken.isBlank());
+        throw gatewayUnavailable("PUT", path, throwable, details);
+    }
+
+    private JsonNode fallbackDelete(String path, String bearerToken, Throwable throwable) {
+        LinkedHashMap<String, Object> details = new LinkedHashMap<>();
+        details.put("hasBearerToken", bearerToken != null && !bearerToken.isBlank());
+        throw gatewayUnavailable("DELETE", path, throwable, details);
+    }
+
+    private JsonNode fallbackPostMultipart(String path,
+                                           String partName,
+                                           byte[] content,
+                                           String filename,
+                                           String contentType,
+                                           String bearerToken,
+                                           Throwable throwable) {
+        LinkedHashMap<String, Object> details = new LinkedHashMap<>();
+        details.put("partName", partName);
+        details.put("filename", filename);
+        details.put("contentLength", content == null ? 0 : content.length);
+        details.put("contentType", contentType);
+        details.put("hasBearerToken", bearerToken != null && !bearerToken.isBlank());
+        throw gatewayUnavailable("POST_MULTIPART", path, throwable, details);
+    }
+
+    private GatewayBinaryResponse fallbackGetBinary(String path,
+                                                    MultiValueMap<String, String> queryParams,
+                                                    String bearerToken,
+                                                    Throwable throwable) {
+        LinkedHashMap<String, Object> details = new LinkedHashMap<>();
+        details.put("queryParams", queryParams == null ? Map.of() : queryParams);
+        details.put("hasBearerToken", bearerToken != null && !bearerToken.isBlank());
+        throw gatewayUnavailable("GET_BINARY", path, throwable, details);
+    }
+
+    private IllegalStateException gatewayUnavailable(String method,
+                                                     String path,
+                                                     Throwable throwable,
+                                                     Map<String, Object> details) {
+        String normalizedPath = normalizePath(path);
+        String message = "Gateway call unavailable after resilience protections method=" + method + " path=" + normalizedPath;
+        return new IllegalStateException(message + " details=" + details, throwable);
     }
 
     private static final class NamedByteArrayResource extends ByteArrayResource {

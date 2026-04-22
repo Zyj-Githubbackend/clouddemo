@@ -78,20 +78,20 @@
 
 ## 日志
 
-- 默认本机日志文件：`../../feedback-service/logs/debug.log`
+- 默认本机日志文件：按运行方式决定，可通过 `APP_LOG_FILE` 覆盖
 - Docker 日志文件：`/app/logs/debug.log`
-- Compose 挂载目录：`./feedback-service/logs`
+- Docker 单栈日志挂载目录：`log/docker/feedback-service/`
 
 ## 数据库迁移
 
-已有数据库可执行：
+新环境使用统一初始化脚本：
 
 ```bash
-mysql -u root -p volunteer_platform < database/migrations/20260411_add_feedback.sql
+mysql -u root -p < deploy/common/bootstrap-db.sql
 ```
 
-Docker 已初始化数据卷可执行：
+Docker 默认启动时会通过 `db-init` 服务执行统一初始化脚本；如需手动重放：
 
 ```bash
-docker compose exec -T mysql mysql --default-character-set=utf8mb4 -uroot -p123888 volunteer_platform < database/migrations/20260411_add_feedback.sql
+docker compose run --rm db-init
 ```

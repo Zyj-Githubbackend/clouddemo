@@ -1,13 +1,17 @@
 package org.example.controller;
 
 import org.example.common.result.Result;
+import org.example.dto.AdminUserPasswordResetRequest;
+import org.example.dto.AdminUserProfileUpdateRequest;
+import org.example.dto.AdminUserRoleUpdateRequest;
+import org.example.dto.AdminUserStatusUpdateRequest;
 import org.example.dto.LoginRequest;
 import org.example.dto.RegisterRequest;
 import org.example.service.UserService;
+import org.example.vo.AdminUserInfo;
+import org.example.vo.AdminUserPage;
 import org.example.vo.LoginResponse;
 import org.example.vo.UserInfo;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -17,7 +21,6 @@ import java.util.Map;
 @RequestMapping("/user")
 public class UserController {
 
-    private static final Logger log = LoggerFactory.getLogger(UserController.class);
     private final UserService userService;
 
     public UserController(UserService userService) {
@@ -63,11 +66,58 @@ public class UserController {
     @GetMapping("/admin/hours")
     public Result<List<UserInfo>> listVolunteerHours(
             @RequestParam(required = false) String keyword,
-            @RequestHeader("X-User-Role") String role) {
-        if (!"ADMIN".equals(role)) {
-            log.warn("rejected volunteer hours query for non-admin role={}", role);
-            return Result.forbidden("Only admin can view volunteer hours");
-        }
-        return Result.success(userService.listVolunteerHours(keyword));
+            @RequestHeader("X-User-Id") Long operatorId) {
+        return Result.success(userService.listVolunteerHours(operatorId, keyword));
+    }
+
+    @GetMapping("/admin/users")
+    public Result<AdminUserPage> listAdminUsers(
+            @RequestHeader("X-User-Id") Long operatorId,
+            @RequestParam(required = false) String keyword,
+            @RequestParam(required = false) String role,
+            @RequestParam(required = false) Integer status,
+            @RequestParam(required = false, defaultValue = "1") Integer page,
+            @RequestParam(required = false, defaultValue = "20") Integer size) {
+        return Result.success(userService.listAdminUsers(operatorId, keyword, role, status, page, size));
+    }
+
+    @GetMapping("/admin/users/{targetUserId}")
+    public Result<AdminUserInfo> getAdminUserDetail(
+            @RequestHeader("X-User-Id") Long operatorId,
+            @PathVariable Long targetUserId) {
+        return Result.success(userService.getAdminUserDetail(operatorId, targetUserId));
+    }
+
+    @PutMapping("/admin/users/{targetUserId}/profile")
+    public Result<AdminUserInfo> updateAdminUserProfile(
+            @RequestHeader("X-User-Id") Long operatorId,
+            @PathVariable Long targetUserId,
+            @RequestBody AdminUserProfileUpdateRequest request) {
+        return Result.success(userService.updateAdminUserProfile(operatorId, targetUserId, request));
+    }
+
+    @PutMapping("/admin/users/{targetUserId}/password")
+    public Result<Void> resetAdminUserPassword(
+            @RequestHeader("X-User-Id") Long operatorId,
+            @PathVariable Long targetUserId,
+            @RequestBody AdminUserPasswordResetRequest request) {
+        userService.resetAdminUserPassword(operatorId, targetUserId, request);
+        return Result.success();
+    }
+
+    @PutMapping("/admin/users/{targetUserId}/role")
+    public Result<AdminUserInfo> updateAdminUserRole(
+            @RequestHeader("X-User-Id") Long operatorId,
+            @PathVariable Long targetUserId,
+            @RequestBody AdminUserRoleUpdateRequest request) {
+        return Result.success(userService.updateAdminUserRole(operatorId, targetUserId, request));
+    }
+
+    @PutMapping("/admin/users/{targetUserId}/status")
+    public Result<AdminUserInfo> updateAdminUserStatus(
+            @RequestHeader("X-User-Id") Long operatorId,
+            @PathVariable Long targetUserId,
+            @RequestBody AdminUserStatusUpdateRequest request) {
+        return Result.success(userService.updateAdminUserStatus(operatorId, targetUserId, request));
     }
 }

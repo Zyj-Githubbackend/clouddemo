@@ -1,0 +1,727 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: gateway-service
+  namespace: cloud-demo
+  labels:
+    app: gateway-service
+spec:
+  selector:
+    app: gateway-service
+  ports:
+    - name: http
+      port: 9000
+      targetPort: 9000
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: gateway-service
+  namespace: cloud-demo
+  labels:
+    app: gateway-service
+spec:
+  replicas: 3
+  selector:
+    matchLabels:
+      app: gateway-service
+  template:
+    metadata:
+      labels:
+        app: gateway-service
+      annotations:
+        prometheus.io/scrape: "true"
+        prometheus.io/path: /actuator/prometheus
+        prometheus.io/port: "9000"
+    spec:
+      topologySpreadConstraints:
+        - maxSkew: 1
+          topologyKey: kubernetes.io/hostname
+          whenUnsatisfiable: ScheduleAnyway
+          labelSelector:
+            matchLabels:
+              app: gateway-service
+      containers:
+        - name: gateway-service
+          image: cloud-demo/gateway-service:latest
+          imagePullPolicy: IfNotPresent
+          ports:
+            - containerPort: 9000
+              name: http
+          envFrom:
+            - configMapRef:
+                name: cloud-demo-shared-config
+          env:
+            - name: APP_LOG_FILE
+              value: /app/logs/debug.log
+            - name: JAVA_TOOL_OPTIONS
+              value: -Duser.timezone=Asia/Shanghai
+            - name: SERVICE_NAME
+              value: gateway-service
+            - name: SPRING_APPLICATION_NAME
+              value: gateway-service
+            - name: JWT_SECRET
+              valueFrom:
+                secretKeyRef:
+                  name: cloud-demo-secret
+                  key: JWT_SECRET
+            - name: SPRING_DATA_REDIS_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: cloud-demo-secret
+                  key: SPRING_DATA_REDIS_PASSWORD
+            - name: MANAGEMENT_ENDPOINT_HEALTH_PROBES_ENABLED
+              value: "true"
+          readinessProbe:
+            httpGet:
+              path: /actuator/health
+              port: http
+            initialDelaySeconds: 20
+            periodSeconds: 10
+            timeoutSeconds: 5
+            failureThreshold: 6
+          livenessProbe:
+            httpGet:
+              path: /actuator/health
+              port: http
+            initialDelaySeconds: 45
+            periodSeconds: 15
+            timeoutSeconds: 5
+            failureThreshold: 6
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: user-service
+  namespace: cloud-demo
+  labels:
+    app: user-service
+spec:
+  selector:
+    app: user-service
+  ports:
+    - name: http
+      port: 8100
+      targetPort: 8100
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: user-service
+  namespace: cloud-demo
+  labels:
+    app: user-service
+spec:
+  replicas: 3
+  selector:
+    matchLabels:
+      app: user-service
+  template:
+    metadata:
+      labels:
+        app: user-service
+      annotations:
+        prometheus.io/scrape: "true"
+        prometheus.io/path: /actuator/prometheus
+        prometheus.io/port: "8100"
+    spec:
+      topologySpreadConstraints:
+        - maxSkew: 1
+          topologyKey: kubernetes.io/hostname
+          whenUnsatisfiable: ScheduleAnyway
+          labelSelector:
+            matchLabels:
+              app: user-service
+      containers:
+        - name: user-service
+          image: cloud-demo/user-service:latest
+          imagePullPolicy: IfNotPresent
+          ports:
+            - containerPort: 8100
+              name: http
+          envFrom:
+            - configMapRef:
+                name: cloud-demo-shared-config
+          env:
+            - name: APP_LOG_FILE
+              value: /app/logs/debug.log
+            - name: JAVA_TOOL_OPTIONS
+              value: -Duser.timezone=Asia/Shanghai
+            - name: SERVICE_NAME
+              value: user-service
+            - name: SPRING_APPLICATION_NAME
+              value: user-service
+            - name: SPRING_DATASOURCE_URL
+              valueFrom:
+                configMapKeyRef:
+                  name: cloud-demo-shared-config
+                  key: USER_SERVICE_DB_URL
+            - name: SPRING_DATASOURCE_USERNAME
+              valueFrom:
+                configMapKeyRef:
+                  name: cloud-demo-shared-config
+                  key: USER_SERVICE_DB_USERNAME
+            - name: SPRING_DATASOURCE_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: cloud-demo-secret
+                  key: USER_SERVICE_DB_PASSWORD
+            - name: JWT_SECRET
+              valueFrom:
+                secretKeyRef:
+                  name: cloud-demo-secret
+                  key: JWT_SECRET
+            - name: SPRING_RABBITMQ_USERNAME
+              valueFrom:
+                secretKeyRef:
+                  name: cloud-demo-secret
+                  key: SPRING_RABBITMQ_USERNAME
+            - name: SPRING_RABBITMQ_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: cloud-demo-secret
+                  key: SPRING_RABBITMQ_PASSWORD
+            - name: MANAGEMENT_ENDPOINT_HEALTH_PROBES_ENABLED
+              value: "true"
+          readinessProbe:
+            httpGet:
+              path: /actuator/health
+              port: http
+            initialDelaySeconds: 20
+            periodSeconds: 10
+            timeoutSeconds: 5
+            failureThreshold: 6
+          livenessProbe:
+            httpGet:
+              path: /actuator/health
+              port: http
+            initialDelaySeconds: 45
+            periodSeconds: 15
+            timeoutSeconds: 5
+            failureThreshold: 6
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: activity-service
+  namespace: cloud-demo
+  labels:
+    app: activity-service
+spec:
+  selector:
+    app: activity-service
+  ports:
+    - name: http
+      port: 8200
+      targetPort: 8200
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: activity-service
+  namespace: cloud-demo
+  labels:
+    app: activity-service
+spec:
+  replicas: 3
+  selector:
+    matchLabels:
+      app: activity-service
+  template:
+    metadata:
+      labels:
+        app: activity-service
+      annotations:
+        prometheus.io/scrape: "true"
+        prometheus.io/path: /actuator/prometheus
+        prometheus.io/port: "8200"
+    spec:
+      topologySpreadConstraints:
+        - maxSkew: 1
+          topologyKey: kubernetes.io/hostname
+          whenUnsatisfiable: ScheduleAnyway
+          labelSelector:
+            matchLabels:
+              app: activity-service
+      containers:
+        - name: activity-service
+          image: cloud-demo/activity-service:latest
+          imagePullPolicy: IfNotPresent
+          ports:
+            - containerPort: 8200
+              name: http
+          envFrom:
+            - configMapRef:
+                name: cloud-demo-shared-config
+          env:
+            - name: APP_LOG_FILE
+              value: /app/logs/debug.log
+            - name: JAVA_TOOL_OPTIONS
+              value: -Duser.timezone=Asia/Shanghai
+            - name: SERVICE_NAME
+              value: activity-service
+            - name: SPRING_APPLICATION_NAME
+              value: activity-service
+            - name: SPRING_DATASOURCE_URL
+              valueFrom:
+                configMapKeyRef:
+                  name: cloud-demo-shared-config
+                  key: ACTIVITY_SERVICE_DB_URL
+            - name: SPRING_DATASOURCE_USERNAME
+              valueFrom:
+                configMapKeyRef:
+                  name: cloud-demo-shared-config
+                  key: ACTIVITY_SERVICE_DB_USERNAME
+            - name: SPRING_DATASOURCE_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: cloud-demo-secret
+                  key: ACTIVITY_SERVICE_DB_PASSWORD
+            - name: MINIO_ACCESS_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: cloud-demo-secret
+                  key: MINIO_ACCESS_KEY
+            - name: MINIO_SECRET_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: cloud-demo-secret
+                  key: MINIO_SECRET_KEY
+            - name: AI_API_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: cloud-demo-secret
+                  key: DEEPSEEK_API_KEY
+            - name: SPRING_RABBITMQ_USERNAME
+              valueFrom:
+                secretKeyRef:
+                  name: cloud-demo-secret
+                  key: SPRING_RABBITMQ_USERNAME
+            - name: SPRING_RABBITMQ_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: cloud-demo-secret
+                  key: SPRING_RABBITMQ_PASSWORD
+            - name: SPRING_DATA_REDIS_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: cloud-demo-secret
+                  key: SPRING_DATA_REDIS_PASSWORD
+            - name: MANAGEMENT_ENDPOINT_HEALTH_PROBES_ENABLED
+              value: "true"
+          readinessProbe:
+            httpGet:
+              path: /actuator/health
+              port: http
+            initialDelaySeconds: 20
+            periodSeconds: 10
+            timeoutSeconds: 5
+            failureThreshold: 6
+          livenessProbe:
+            httpGet:
+              path: /actuator/health
+              port: http
+            initialDelaySeconds: 45
+            periodSeconds: 15
+            timeoutSeconds: 5
+            failureThreshold: 6
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: announcement-service
+  namespace: cloud-demo
+  labels:
+    app: announcement-service
+spec:
+  selector:
+    app: announcement-service
+  ports:
+    - name: http
+      port: 8300
+      targetPort: 8300
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: announcement-service
+  namespace: cloud-demo
+  labels:
+    app: announcement-service
+spec:
+  replicas: 3
+  selector:
+    matchLabels:
+      app: announcement-service
+  template:
+    metadata:
+      labels:
+        app: announcement-service
+      annotations:
+        prometheus.io/scrape: "true"
+        prometheus.io/path: /actuator/prometheus
+        prometheus.io/port: "8300"
+    spec:
+      topologySpreadConstraints:
+        - maxSkew: 1
+          topologyKey: kubernetes.io/hostname
+          whenUnsatisfiable: ScheduleAnyway
+          labelSelector:
+            matchLabels:
+              app: announcement-service
+      containers:
+        - name: announcement-service
+          image: cloud-demo/announcement-service:latest
+          imagePullPolicy: IfNotPresent
+          ports:
+            - containerPort: 8300
+              name: http
+          envFrom:
+            - configMapRef:
+                name: cloud-demo-shared-config
+          env:
+            - name: APP_LOG_FILE
+              value: /app/logs/debug.log
+            - name: JAVA_TOOL_OPTIONS
+              value: -Duser.timezone=Asia/Shanghai
+            - name: SERVICE_NAME
+              value: announcement-service
+            - name: SPRING_APPLICATION_NAME
+              value: announcement-service
+            - name: SPRING_DATASOURCE_URL
+              valueFrom:
+                configMapKeyRef:
+                  name: cloud-demo-shared-config
+                  key: ANNOUNCEMENT_SERVICE_DB_URL
+            - name: SPRING_DATASOURCE_USERNAME
+              valueFrom:
+                configMapKeyRef:
+                  name: cloud-demo-shared-config
+                  key: ANNOUNCEMENT_SERVICE_DB_USERNAME
+            - name: SPRING_DATASOURCE_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: cloud-demo-secret
+                  key: ANNOUNCEMENT_SERVICE_DB_PASSWORD
+            - name: MINIO_ACCESS_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: cloud-demo-secret
+                  key: MINIO_ACCESS_KEY
+            - name: MINIO_SECRET_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: cloud-demo-secret
+                  key: MINIO_SECRET_KEY
+            - name: SPRING_RABBITMQ_USERNAME
+              valueFrom:
+                secretKeyRef:
+                  name: cloud-demo-secret
+                  key: SPRING_RABBITMQ_USERNAME
+            - name: SPRING_RABBITMQ_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: cloud-demo-secret
+                  key: SPRING_RABBITMQ_PASSWORD
+            - name: MANAGEMENT_ENDPOINT_HEALTH_PROBES_ENABLED
+              value: "true"
+          readinessProbe:
+            httpGet:
+              path: /actuator/health
+              port: http
+            initialDelaySeconds: 20
+            periodSeconds: 10
+            timeoutSeconds: 5
+            failureThreshold: 6
+          livenessProbe:
+            httpGet:
+              path: /actuator/health
+              port: http
+            initialDelaySeconds: 45
+            periodSeconds: 15
+            timeoutSeconds: 5
+            failureThreshold: 6
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: feedback-service
+  namespace: cloud-demo
+  labels:
+    app: feedback-service
+spec:
+  selector:
+    app: feedback-service
+  ports:
+    - name: http
+      port: 8400
+      targetPort: 8400
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: feedback-service
+  namespace: cloud-demo
+  labels:
+    app: feedback-service
+spec:
+  replicas: 3
+  selector:
+    matchLabels:
+      app: feedback-service
+  template:
+    metadata:
+      labels:
+        app: feedback-service
+      annotations:
+        prometheus.io/scrape: "true"
+        prometheus.io/path: /actuator/prometheus
+        prometheus.io/port: "8400"
+    spec:
+      topologySpreadConstraints:
+        - maxSkew: 1
+          topologyKey: kubernetes.io/hostname
+          whenUnsatisfiable: ScheduleAnyway
+          labelSelector:
+            matchLabels:
+              app: feedback-service
+      containers:
+        - name: feedback-service
+          image: cloud-demo/feedback-service:latest
+          imagePullPolicy: IfNotPresent
+          ports:
+            - containerPort: 8400
+              name: http
+          envFrom:
+            - configMapRef:
+                name: cloud-demo-shared-config
+          env:
+            - name: APP_LOG_FILE
+              value: /app/logs/debug.log
+            - name: JAVA_TOOL_OPTIONS
+              value: -Duser.timezone=Asia/Shanghai
+            - name: SERVICE_NAME
+              value: feedback-service
+            - name: SPRING_APPLICATION_NAME
+              value: feedback-service
+            - name: SPRING_DATASOURCE_URL
+              valueFrom:
+                configMapKeyRef:
+                  name: cloud-demo-shared-config
+                  key: FEEDBACK_SERVICE_DB_URL
+            - name: SPRING_DATASOURCE_USERNAME
+              valueFrom:
+                configMapKeyRef:
+                  name: cloud-demo-shared-config
+                  key: FEEDBACK_SERVICE_DB_USERNAME
+            - name: SPRING_DATASOURCE_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: cloud-demo-secret
+                  key: FEEDBACK_SERVICE_DB_PASSWORD
+            - name: MINIO_ACCESS_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: cloud-demo-secret
+                  key: MINIO_ACCESS_KEY
+            - name: MINIO_SECRET_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: cloud-demo-secret
+                  key: MINIO_SECRET_KEY
+            - name: SPRING_RABBITMQ_USERNAME
+              valueFrom:
+                secretKeyRef:
+                  name: cloud-demo-secret
+                  key: SPRING_RABBITMQ_USERNAME
+            - name: SPRING_RABBITMQ_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: cloud-demo-secret
+                  key: SPRING_RABBITMQ_PASSWORD
+            - name: MANAGEMENT_ENDPOINT_HEALTH_PROBES_ENABLED
+              value: "true"
+          readinessProbe:
+            httpGet:
+              path: /actuator/health
+              port: http
+            initialDelaySeconds: 20
+            periodSeconds: 10
+            timeoutSeconds: 5
+            failureThreshold: 6
+          livenessProbe:
+            httpGet:
+              path: /actuator/health
+              port: http
+            initialDelaySeconds: 45
+            periodSeconds: 15
+            timeoutSeconds: 5
+            failureThreshold: 6
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: monitor-service
+  namespace: cloud-demo
+  labels:
+    app: monitor-service
+spec:
+  selector:
+    app: monitor-service
+  ports:
+    - name: http
+      port: 9100
+      targetPort: 9100
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: monitor-service
+  namespace: cloud-demo
+  labels:
+    app: monitor-service
+spec:
+  replicas: 3
+  selector:
+    matchLabels:
+      app: monitor-service
+  template:
+    metadata:
+      labels:
+        app: monitor-service
+      annotations:
+        prometheus.io/scrape: "true"
+        prometheus.io/path: /actuator/prometheus
+        prometheus.io/port: "9100"
+    spec:
+      topologySpreadConstraints:
+        - maxSkew: 1
+          topologyKey: kubernetes.io/hostname
+          whenUnsatisfiable: ScheduleAnyway
+          labelSelector:
+            matchLabels:
+              app: monitor-service
+      containers:
+        - name: monitor-service
+          image: cloud-demo/monitor-service:latest
+          imagePullPolicy: IfNotPresent
+          ports:
+            - containerPort: 9100
+              name: http
+          envFrom:
+            - configMapRef:
+                name: cloud-demo-shared-config
+          env:
+            - name: APP_LOG_FILE
+              value: /app/logs/debug.log
+            - name: JAVA_TOOL_OPTIONS
+              value: -Duser.timezone=Asia/Shanghai
+            - name: SERVICE_NAME
+              value: monitor-service
+            - name: SPRING_APPLICATION_NAME
+              value: monitor-service
+            - name: MANAGEMENT_ENDPOINT_HEALTH_PROBES_ENABLED
+              value: "true"
+          readinessProbe:
+            httpGet:
+              path: /actuator/health
+              port: http
+            initialDelaySeconds: 20
+            periodSeconds: 10
+            timeoutSeconds: 5
+            failureThreshold: 6
+          livenessProbe:
+            httpGet:
+              path: /actuator/health
+              port: http
+            initialDelaySeconds: 45
+            periodSeconds: 15
+            timeoutSeconds: 5
+            failureThreshold: 6
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: mcp-service
+  namespace: cloud-demo
+  labels:
+    app: mcp-service
+spec:
+  selector:
+    app: mcp-service
+  ports:
+    - name: http
+      port: 9300
+      targetPort: 9300
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: mcp-service
+  namespace: cloud-demo
+  labels:
+    app: mcp-service
+spec:
+  replicas: 3
+  selector:
+    matchLabels:
+      app: mcp-service
+  template:
+    metadata:
+      labels:
+        app: mcp-service
+      annotations:
+        prometheus.io/scrape: "true"
+        prometheus.io/path: /actuator/prometheus
+        prometheus.io/port: "9300"
+    spec:
+      topologySpreadConstraints:
+        - maxSkew: 1
+          topologyKey: kubernetes.io/hostname
+          whenUnsatisfiable: ScheduleAnyway
+          labelSelector:
+            matchLabels:
+              app: mcp-service
+      containers:
+        - name: mcp-service
+          image: cloud-demo/mcp-service:latest
+          imagePullPolicy: IfNotPresent
+          ports:
+            - containerPort: 9300
+              name: http
+          envFrom:
+            - configMapRef:
+                name: cloud-demo-shared-config
+          env:
+            - name: APP_LOG_FILE
+              value: /app/logs/debug.log
+            - name: JAVA_TOOL_OPTIONS
+              value: -Duser.timezone=Asia/Shanghai
+            - name: MANAGEMENT_ENDPOINT_HEALTH_PROBES_ENABLED
+              value: "true"
+            - name: CLOUD_DEMO_JWT_SECRET
+              valueFrom:
+                secretKeyRef:
+                  name: cloud-demo-secret
+                  key: CLOUD_DEMO_JWT_SECRET
+            - name: SPRING_DATA_REDIS_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: cloud-demo-secret
+                  key: SPRING_DATA_REDIS_PASSWORD
+          readinessProbe:
+            httpGet:
+              path: /actuator/health
+              port: http
+            initialDelaySeconds: 20
+            periodSeconds: 10
+            timeoutSeconds: 5
+            failureThreshold: 6
+          livenessProbe:
+            httpGet:
+              path: /actuator/health
+              port: http
+            initialDelaySeconds: 45
+            periodSeconds: 15
+            timeoutSeconds: 5
+            failureThreshold: 6

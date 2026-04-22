@@ -1,5 +1,7 @@
 package org.example.service;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
@@ -12,19 +14,26 @@ import org.apache.poi.ss.usermodel.HorizontalAlignment;
 import org.apache.poi.ss.usermodel.Row;
 import org.apache.poi.ss.usermodel.Sheet;
 import org.apache.poi.xssf.usermodel.XSSFWorkbook;
+import org.example.client.UserServiceClient;
 import org.example.common.constant.RedisKeyConstant;
 import org.example.common.exception.BusinessException;
 import org.example.dto.ActivityCreateRequest;
 import org.example.dto.ActivityRegisteredCount;
+import org.example.dto.UserSummary;
 import org.example.entity.Activity;
 import org.example.entity.Registration;
-import org.example.feign.UserServiceClient;
 import org.example.mapper.ActivityMapper;
+import org.example.mapper.EventOutboxMapper;
 import org.example.mapper.RegistrationMapper;
+import org.example.messaging.IdempotencyHelper;
+import org.example.messaging.MessagingConstants;
+import org.example.messaging.outbox.EventOutbox;
+import org.example.messaging.outbox.OutboxStatus;
 import org.example.vo.ActivityVO;
 import org.example.vo.RegistrationVO;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.beans.BeanUtils;
 import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.stereotype.Service;
@@ -40,6 +49,7 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashMap;
+import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
@@ -54,20 +64,29 @@ public class ActivityService {
 
     private final ActivityMapper activityMapper;
     private final RegistrationMapper registrationMapper;
+    private final EventOutboxMapper eventOutboxMapper;
     private final StringRedisTemplate redisTemplate;
-    private final UserServiceClient userServiceClient;
     private final MinioStorageService minioStorageService;
+    private final IdempotencyHelper idempotencyHelper;
+    private final UserServiceClient userServiceClient;
+    private final ObjectMapper objectMapper;
 
     public ActivityService(ActivityMapper activityMapper,
                            RegistrationMapper registrationMapper,
+                           EventOutboxMapper eventOutboxMapper,
                            StringRedisTemplate redisTemplate,
+                           MinioStorageService minioStorageService,
+                           IdempotencyHelper idempotencyHelper,
                            UserServiceClient userServiceClient,
-                           MinioStorageService minioStorageService) {
+                           ObjectMapper objectMapper) {
         this.activityMapper = activityMapper;
         this.registrationMapper = registrationMapper;
+        this.eventOutboxMapper = eventOutboxMapper;
         this.redisTemplate = redisTemplate;
-        this.userServiceClient = userServiceClient;
         this.minioStorageService = minioStorageService;
+        this.idempotencyHelper = idempotencyHelper;
+        this.userServiceClient = userServiceClient;
+        this.objectMapper = objectMapper;
     }
 
     public IPage<ActivityVO> listActivities(Integer page, Integer size, String status, String category,
@@ -159,11 +178,70 @@ public class ActivityService {
         activity.setStatus("RECRUITING");
 
         activityMapper.insert(activity);
+        eventOutboxMapper.insert(buildActivityUpsertedOutbox(activity, creatorId));
 
         String stockKey = RedisKeyConstant.getActivityStockKey(activity.getId());
         redisTemplate.opsForValue().set(stockKey, String.valueOf(activity.getMaxParticipants()), 7, TimeUnit.DAYS);
         log.info("created activity activityId={} creatorId={} maxParticipants={}",
                 activity.getId(), creatorId, activity.getMaxParticipants());
+    }
+
+    private EventOutbox buildActivityUpsertedOutbox(Activity activity, Long creatorId) {
+        EventOutbox outbox = new EventOutbox();
+        outbox.setMessageId(idempotencyHelper.newMessageId());
+        outbox.setEventType(MessagingConstants.ROUTING_ACTIVITY_UPSERTED);
+        outbox.setAggregateType("activity");
+        outbox.setAggregateId(String.valueOf(activity.getId()));
+        outbox.setPayloadJson(buildActivityUpsertedPayload(activity, creatorId));
+        outbox.setStatus(OutboxStatus.PENDING);
+        outbox.setRetryCount(0);
+        outbox.setNextRetryTime(LocalDateTime.now());
+        outbox.setCreatedAt(LocalDateTime.now());
+        return outbox;
+    }
+
+    private EventOutbox buildActivityDeletedOutbox(Long activityId) {
+        EventOutbox outbox = new EventOutbox();
+        outbox.setMessageId(idempotencyHelper.newMessageId());
+        outbox.setEventType(MessagingConstants.ROUTING_ACTIVITY_DELETED);
+        outbox.setAggregateType("activity");
+        outbox.setAggregateId(String.valueOf(activityId));
+        outbox.setPayloadJson(buildActivityDeletedPayload(activityId));
+        outbox.setStatus(OutboxStatus.PENDING);
+        outbox.setRetryCount(0);
+        outbox.setNextRetryTime(LocalDateTime.now());
+        outbox.setCreatedAt(LocalDateTime.now());
+        return outbox;
+    }
+
+    private String buildActivityUpsertedPayload(Activity activity, Long creatorId) {
+        LinkedHashMap<String, Object> payload = new LinkedHashMap<>();
+        payload.put("activityId", activity.getId());
+        payload.put("title", activity.getTitle());
+        payload.put("location", activity.getLocation());
+        payload.put("status", activity.getStatus());
+        payload.put("category", activity.getCategory());
+        payload.put("creatorId", creatorId);
+        payload.put("startTime", activity.getStartTime() == null ? null : activity.getStartTime().toString());
+        payload.put("endTime", activity.getEndTime() == null ? null : activity.getEndTime().toString());
+        payload.put("maxParticipants", activity.getMaxParticipants());
+        payload.put("stackId", System.getenv().getOrDefault("STACK_ID", "single"));
+        return writePayload(payload, "activity.upserted");
+    }
+
+    private String buildActivityDeletedPayload(Long activityId) {
+        LinkedHashMap<String, Object> payload = new LinkedHashMap<>();
+        payload.put("activityId", activityId);
+        payload.put("stackId", System.getenv().getOrDefault("STACK_ID", "single"));
+        return writePayload(payload, "activity.deleted");
+    }
+
+    private String writePayload(Map<String, Object> payload, String eventName) {
+        try {
+            return objectMapper.writeValueAsString(payload);
+        } catch (JsonProcessingException ex) {
+            throw new IllegalStateException("failed to serialize " + eventName + " payload", ex);
+        }
     }
 
     @Transactional(rollbackFor = Exception.class)
@@ -194,6 +272,7 @@ public class ActivityService {
                 minioStorageService.deleteObjectQuietly(oldImageKey);
             }
         }
+        eventOutboxMapper.insert(buildActivityUpsertedOutbox(existing, creatorId));
         log.info("updated activity activityId={} creatorId={}", activityId, creatorId);
     }
 
@@ -209,6 +288,10 @@ public class ActivityService {
         if ("CANCELLED".equals(existing.getStatus())) {
             throw new BusinessException("Activity has already been cancelled");
         }
+        LocalDateTime now = LocalDateTime.now();
+        if (existing.getStartTime() == null || !now.isBefore(existing.getStartTime())) {
+            throw new BusinessException("Activities can only be cancelled before they start");
+        }
 
         LambdaQueryWrapper<Registration> regWrapper = new LambdaQueryWrapper<>();
         regWrapper.eq(Registration::getActivityId, activityId);
@@ -217,6 +300,7 @@ public class ActivityService {
         existing.setCurrentParticipants(0);
         activityMapper.updateById(existing);
         reconcileActivityRegistrationStats(existing, 0);
+        eventOutboxMapper.insert(buildActivityUpsertedOutbox(existing, existing.getCreatorId()));
         log.info("cancelled activity activityId={} removedRegistrations={}", activityId, deletedRegistrations);
     }
 
@@ -232,11 +316,16 @@ public class ActivityService {
         if ("CANCELLED".equals(existing.getStatus())) {
             throw new BusinessException("Cancelled activities cannot be completed");
         }
+        LocalDateTime now = LocalDateTime.now();
+        if (existing.getEndTime() == null || !now.isAfter(existing.getEndTime())) {
+            throw new BusinessException("Activities can only be completed after they end");
+        }
 
         existing.setStatus("COMPLETED");
         activityMapper.updateById(existing);
         int registeredCount = countRegisteredForActivity(activityId);
         reconcileActivityRegistrationStats(existing, registeredCount);
+        eventOutboxMapper.insert(buildActivityUpsertedOutbox(existing, existing.getCreatorId()));
         log.info("completed activity activityId={} registeredCount={}", activityId, registeredCount);
     }
 
@@ -261,19 +350,20 @@ public class ActivityService {
             throw new BusinessException("Registration has ended");
         }
 
-        LambdaQueryWrapper<Registration> wrapper = new LambdaQueryWrapper<>();
-        wrapper.eq(Registration::getUserId, userId)
-                .eq(Registration::getActivityId, activityId)
-                .eq(Registration::getStatus, "REGISTERED");
-        if (registrationMapper.selectCount(wrapper) > 0) {
+        Registration existingRegistration = findExistingRegistration(activityId, userId);
+        if (existingRegistration != null && "REGISTERED".equals(existingRegistration.getStatus())) {
             throw new BusinessException("You have already registered for this activity");
         }
 
         String stockKey = RedisKeyConstant.getActivityStockKey(activityId);
-        Long stock = redisTemplate.opsForValue().decrement(stockKey);
-        if (stock == null || stock < 0) {
-            redisTemplate.opsForValue().increment(stockKey);
-            throw new BusinessException("No slots available");
+        Long stock = decrementAvailableStock(activity, stockKey);
+
+        if (existingRegistration != null) {
+            reactivateRegistration(existingRegistration);
+            activityMapper.incrementParticipants(activityId);
+            log.info("reactivated registration for activity activityId={} userId={} registrationId={} remainingSlots={}",
+                    activityId, userId, existingRegistration.getId(), stock);
+            return;
         }
 
         Registration registration = new Registration();
@@ -284,7 +374,13 @@ public class ActivityService {
         registration.setHoursConfirmed(0);
         registration.setStatus("REGISTERED");
 
-        registrationMapper.insert(registration);
+        try {
+            registrationMapper.insert(registration);
+        } catch (DataIntegrityViolationException ex) {
+            redisTemplate.opsForValue().increment(stockKey);
+            log.warn("duplicate registration blocked by database constraint activityId={} userId={}", activityId, userId, ex);
+            throw new BusinessException("You have already registered for this activity");
+        }
         activityMapper.incrementParticipants(activityId);
         log.info("registered user for activity activityId={} userId={} registrationId={} remainingSlots={}",
                 activityId, userId, registration.getId(), stock);
@@ -391,10 +487,14 @@ public class ActivityService {
     }
 
     public List<RegistrationVO> listRegistrationsForAdmin(Long activityId) {
+        List<RegistrationVO> registrations;
         if (activityId != null) {
-            return registrationMapper.selectRegistrationsForAdminByActivityId(activityId);
+            registrations = registrationMapper.selectRegistrationsForAdminByActivityId(activityId);
+        } else {
+            registrations = registrationMapper.selectAllRegistrationsForAdmin();
         }
-        return registrationMapper.selectAllRegistrationsForAdmin();
+        enrichRegistrationUsers(registrations);
+        return registrations;
     }
 
     public List<ActivityVO> listEndedActivitiesForAdmin() {
@@ -418,6 +518,7 @@ public class ActivityService {
         w.le(Activity::getStartTime, now)
                 .ge(Activity::getEndTime, now)
                 .ne(Activity::getStatus, "CANCELLED")
+                .ne(Activity::getStatus, "COMPLETED")
                 .orderByAsc(Activity::getStartTime);
         List<Activity> list = activityMapper.selectList(w);
         List<ActivityVO> result = new ArrayList<>(list.size());
@@ -446,6 +547,9 @@ public class ActivityService {
         }
         if ("CANCELLED".equals(activity.getStatus())) {
             throw new BusinessException("Cancelled activities cannot be checked in");
+        }
+        if ("COMPLETED".equals(activity.getStatus())) {
+            throw new BusinessException("Completed activities cannot be checked in");
         }
 
         LocalDateTime now = LocalDateTime.now();
@@ -491,14 +595,50 @@ public class ActivityService {
         if ("CANCELLED".equals(activity.getStatus())) {
             throw new BusinessException("Cancelled activities cannot be confirmed");
         }
+        if ("COMPLETED".equals(activity.getStatus())) {
+            throw new BusinessException("Completed activities cannot be confirmed");
+        }
 
         registration.setHoursConfirmed(1);
         registration.setConfirmTime(LocalDateTime.now());
         registrationMapper.updateById(registration);
 
-        userServiceClient.updateVolunteerHours(registration.getUserId(), activity.getVolunteerHours());
-        log.info("confirmed volunteer hours registrationId={} activityId={} userId={} hours={}",
-                registrationId, registration.getActivityId(), registration.getUserId(), activity.getVolunteerHours());
+        eventOutboxMapper.insert(buildUserUpdatedOutbox(registration, activity));
+        log.info("confirmed volunteer hours registrationId={} activityId={} userId={} hours={} eventType={}",
+                registrationId,
+                registration.getActivityId(),
+                registration.getUserId(),
+                activity.getVolunteerHours(),
+                MessagingConstants.ROUTING_USER_UPDATED);
+    }
+
+    private EventOutbox buildUserUpdatedOutbox(Registration registration, Activity activity) {
+        EventOutbox outbox = new EventOutbox();
+        outbox.setMessageId(idempotencyHelper.newMessageId());
+        outbox.setEventType(MessagingConstants.ROUTING_USER_UPDATED);
+        outbox.setAggregateType("user");
+        outbox.setAggregateId(String.valueOf(registration.getUserId()));
+        outbox.setPayloadJson(buildUserUpdatedPayload(registration, activity));
+        outbox.setStatus(OutboxStatus.PENDING);
+        outbox.setRetryCount(0);
+        outbox.setNextRetryTime(LocalDateTime.now());
+        outbox.setCreatedAt(LocalDateTime.now());
+        return outbox;
+    }
+
+    private String buildUserUpdatedPayload(Registration registration, Activity activity) {
+        LinkedHashMap<String, Object> payload = new LinkedHashMap<>();
+        payload.put("userId", registration.getUserId());
+        payload.put("registrationId", registration.getId());
+        payload.put("activityId", registration.getActivityId());
+        payload.put("hours", activity.getVolunteerHours());
+        payload.put("confirmedAt", registration.getConfirmTime() == null ? null : registration.getConfirmTime().toString());
+        payload.put("stackId", System.getenv().getOrDefault("STACK_ID", "single"));
+        try {
+            return objectMapper.writeValueAsString(payload);
+        } catch (JsonProcessingException ex) {
+            throw new IllegalStateException("failed to serialize user.updated payload", ex);
+        }
     }
 
     @Transactional(rollbackFor = Exception.class)
@@ -513,16 +653,89 @@ public class ActivityService {
         int deletedRegistrations = registrationMapper.delete(regWrapper);
         activityMapper.deleteById(activityId);
         redisTemplate.delete(RedisKeyConstant.getActivityStockKey(activityId));
+        eventOutboxMapper.insert(buildActivityDeletedOutbox(activityId));
         for (String imageKey : splitImageKeys(activity.getImageKey())) {
             minioStorageService.deleteObjectQuietly(imageKey);
         }
         log.info("deleted activity activityId={} removedRegistrations={}", activityId, deletedRegistrations);
     }
 
+    private void enrichRegistrationUsers(List<RegistrationVO> registrations) {
+        if (registrations == null || registrations.isEmpty()) {
+            return;
+        }
+
+        List<Long> userIds = registrations.stream()
+                .map(RegistrationVO::getUserId)
+                .filter(userId -> userId != null && userId > 0)
+                .distinct()
+                .toList();
+        if (userIds.isEmpty()) {
+            return;
+        }
+
+        Map<Long, UserSummary> userSummaryMap = userServiceClient.listUserSummariesByIds(userIds);
+        for (RegistrationVO registration : registrations) {
+            UserSummary userSummary = userSummaryMap.get(registration.getUserId());
+            if (userSummary == null) {
+                continue;
+            }
+            registration.setUsername(userSummary.getUsername());
+            registration.setRealName(userSummary.getRealName());
+            registration.setStudentNo(userSummary.getStudentNo());
+            registration.setPhone(userSummary.getPhone());
+        }
+    }
+
     private int countRegisteredForActivity(Long activityId) {
         LambdaQueryWrapper<Registration> w = new LambdaQueryWrapper<>();
         w.eq(Registration::getActivityId, activityId).eq(Registration::getStatus, "REGISTERED");
         return Math.toIntExact(registrationMapper.selectCount(w));
+    }
+
+    private Registration findExistingRegistration(Long activityId, Long userId) {
+        LambdaQueryWrapper<Registration> wrapper = new LambdaQueryWrapper<>();
+        wrapper.eq(Registration::getUserId, userId)
+                .eq(Registration::getActivityId, activityId)
+                .last("LIMIT 1");
+        return registrationMapper.selectOne(wrapper);
+    }
+
+    private Long decrementAvailableStock(Activity activity, String stockKey) {
+        Long stock = redisTemplate.opsForValue().decrement(stockKey);
+        if (stock != null && stock >= 0) {
+            return stock;
+        }
+        if (stock != null) {
+            redisTemplate.opsForValue().increment(stockKey);
+        }
+
+        int actualRegistered = countRegisteredForActivity(activity.getId());
+        reconcileActivityRegistrationStats(activity, actualRegistered);
+        if (actualRegistered >= activity.getMaxParticipants()) {
+            throw new BusinessException("No slots available");
+        }
+
+        stock = redisTemplate.opsForValue().decrement(stockKey);
+        if (stock == null || stock < 0) {
+            if (stock != null) {
+                redisTemplate.opsForValue().increment(stockKey);
+            }
+            throw new BusinessException("No slots available");
+        }
+        log.info("rebuilt activity stock from database activityId={} registered={} remainingSlots={}",
+                activity.getId(), actualRegistered, stock);
+        return stock;
+    }
+
+    private void reactivateRegistration(Registration registration) {
+        registration.setRegistrationTime(LocalDateTime.now());
+        registration.setCheckInStatus(0);
+        registration.setCheckInTime(null);
+        registration.setHoursConfirmed(0);
+        registration.setConfirmTime(null);
+        registration.setStatus("REGISTERED");
+        registrationMapper.updateById(registration);
     }
 
     private void reconcileActivityRegistrationStats(Activity activity, int actualRegistered) {

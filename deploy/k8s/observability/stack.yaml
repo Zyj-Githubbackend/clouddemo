@@ -1,0 +1,485 @@
+apiVersion: v1
+kind: Secret
+metadata:
+  name: grafana-secret
+  namespace: observability
+type: Opaque
+stringData:
+  GF_SECURITY_ADMIN_USER: admin
+  GF_SECURITY_ADMIN_PASSWORD: admin
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: prometheus
+  namespace: observability
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: prometheus-cloud-demo
+rules:
+  - apiGroups: [""]
+    resources: ["nodes", "services", "endpoints", "pods", "namespaces"]
+    verbs: ["get", "list", "watch"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: prometheus-cloud-demo
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: prometheus-cloud-demo
+subjects:
+  - kind: ServiceAccount
+    name: prometheus
+    namespace: observability
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: prometheus
+  namespace: observability
+  labels:
+    app: prometheus
+spec:
+  selector:
+    app: prometheus
+  ports:
+    - name: http
+      port: 9090
+      targetPort: 9090
+---
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: prometheus
+  namespace: observability
+spec:
+  serviceName: prometheus
+  replicas: 1
+  selector:
+    matchLabels:
+      app: prometheus
+  template:
+    metadata:
+      labels:
+        app: prometheus
+    spec:
+      serviceAccountName: prometheus
+      containers:
+        - name: prometheus
+          image: prom/prometheus:v2.54.1
+          imagePullPolicy: IfNotPresent
+          args:
+            - --config.file=/etc/prometheus/prometheus.yml
+            - --storage.tsdb.path=/prometheus
+            - --web.enable-lifecycle
+          ports:
+            - containerPort: 9090
+              name: http
+          volumeMounts:
+            - name: config
+              mountPath: /etc/prometheus/prometheus.yml
+              subPath: prometheus.yml
+            - name: data
+              mountPath: /prometheus
+      volumes:
+        - name: config
+          configMap:
+            name: prometheus-config
+  volumeClaimTemplates:
+    - metadata:
+        name: data
+      spec:
+        accessModes: ["ReadWriteOnce"]
+        resources:
+          requests:
+            storage: 20Gi
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: loki
+  namespace: observability
+  labels:
+    app: loki
+spec:
+  selector:
+    app: loki
+  ports:
+    - name: http
+      port: 3100
+      targetPort: 3100
+---
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: loki
+  namespace: observability
+spec:
+  serviceName: loki
+  replicas: 1
+  selector:
+    matchLabels:
+      app: loki
+  template:
+    metadata:
+      labels:
+        app: loki
+    spec:
+      containers:
+        - name: loki
+          image: grafana/loki:3.1.1
+          imagePullPolicy: IfNotPresent
+          args:
+            - -config.file=/etc/loki/config.yaml
+          ports:
+            - containerPort: 3100
+              name: http
+          volumeMounts:
+            - name: config
+              mountPath: /etc/loki/config.yaml
+              subPath: config.yaml
+            - name: data
+              mountPath: /loki
+      volumes:
+        - name: config
+          configMap:
+            name: loki-config
+  volumeClaimTemplates:
+    - metadata:
+        name: data
+      spec:
+        accessModes: ["ReadWriteOnce"]
+        resources:
+          requests:
+            storage: 20Gi
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: tempo
+  namespace: observability
+  labels:
+    app: tempo
+spec:
+  selector:
+    app: tempo
+  ports:
+    - name: http
+      port: 3200
+      targetPort: 3200
+    - name: grpc
+      port: 4317
+      targetPort: 4317
+    - name: otlp-http
+      port: 4318
+      targetPort: 4318
+---
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: tempo
+  namespace: observability
+spec:
+  serviceName: tempo
+  replicas: 1
+  selector:
+    matchLabels:
+      app: tempo
+  template:
+    metadata:
+      labels:
+        app: tempo
+    spec:
+      containers:
+        - name: tempo
+          image: grafana/tempo:2.6.1
+          imagePullPolicy: IfNotPresent
+          args:
+            - -config.file=/etc/tempo.yaml
+          ports:
+            - containerPort: 3200
+              name: http
+            - containerPort: 4317
+              name: grpc
+            - containerPort: 4318
+              name: otlp-http
+          volumeMounts:
+            - name: config
+              mountPath: /etc/tempo.yaml
+              subPath: tempo.yaml
+            - name: data
+              mountPath: /var/tempo
+      volumes:
+        - name: config
+          configMap:
+            name: tempo-config
+  volumeClaimTemplates:
+    - metadata:
+        name: data
+      spec:
+        accessModes: ["ReadWriteOnce"]
+        resources:
+          requests:
+            storage: 20Gi
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: otel-collector
+  namespace: observability
+  labels:
+    app: otel-collector
+spec:
+  selector:
+    app: otel-collector
+  ports:
+    - name: otlp-grpc
+      port: 4317
+      targetPort: 4317
+    - name: otlp-http
+      port: 4318
+      targetPort: 4318
+    - name: health
+      port: 13133
+      targetPort: 13133
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: otel-collector
+  namespace: observability
+  labels:
+    app: otel-collector
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: otel-collector
+  template:
+    metadata:
+      labels:
+        app: otel-collector
+    spec:
+      containers:
+        - name: otel-collector
+          image: otel/opentelemetry-collector-contrib:0.108.0
+          imagePullPolicy: IfNotPresent
+          args:
+            - --config=/etc/otelcol-contrib/config.yaml
+          ports:
+            - containerPort: 4317
+              name: otlp-grpc
+            - containerPort: 4318
+              name: otlp-http
+            - containerPort: 13133
+              name: health
+          readinessProbe:
+            httpGet:
+              path: /
+              port: health
+            initialDelaySeconds: 10
+            periodSeconds: 10
+            timeoutSeconds: 3
+          livenessProbe:
+            httpGet:
+              path: /
+              port: health
+            initialDelaySeconds: 30
+            periodSeconds: 15
+            timeoutSeconds: 3
+          volumeMounts:
+            - name: config
+              mountPath: /etc/otelcol-contrib/config.yaml
+              subPath: config.yaml
+      volumes:
+        - name: config
+          configMap:
+            name: otel-collector-config
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: grafana
+  namespace: observability
+  labels:
+    app: grafana
+spec:
+  selector:
+    app: grafana
+  ports:
+    - name: http
+      port: 3000
+      targetPort: 3000
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: grafana-data
+  namespace: observability
+spec:
+  accessModes: ["ReadWriteOnce"]
+  resources:
+    requests:
+      storage: 10Gi
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: grafana
+  namespace: observability
+  labels:
+    app: grafana
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: grafana
+  template:
+    metadata:
+      labels:
+        app: grafana
+    spec:
+      containers:
+        - name: grafana
+          image: grafana/grafana:11.2.0
+          imagePullPolicy: IfNotPresent
+          envFrom:
+            - secretRef:
+                name: grafana-secret
+          env:
+            - name: GF_USERS_ALLOW_SIGN_UP
+              value: "false"
+          ports:
+            - containerPort: 3000
+              name: http
+          readinessProbe:
+            httpGet:
+              path: /api/health
+              port: http
+            initialDelaySeconds: 20
+            periodSeconds: 10
+            timeoutSeconds: 5
+          livenessProbe:
+            httpGet:
+              path: /api/health
+              port: http
+            initialDelaySeconds: 45
+            periodSeconds: 15
+            timeoutSeconds: 5
+          volumeMounts:
+            - name: grafana-data
+              mountPath: /var/lib/grafana
+            - name: datasources
+              mountPath: /etc/grafana/provisioning/datasources/datasources.yaml
+              subPath: datasources.yaml
+      volumes:
+        - name: grafana-data
+          persistentVolumeClaim:
+            claimName: grafana-data
+        - name: datasources
+          configMap:
+            name: grafana-datasources
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: promtail
+  namespace: observability
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: promtail-cloud-demo
+rules:
+  - apiGroups: [""]
+    resources: ["pods", "namespaces", "nodes"]
+    verbs: ["get", "list", "watch"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: promtail-cloud-demo
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: promtail-cloud-demo
+subjects:
+  - kind: ServiceAccount
+    name: promtail
+    namespace: observability
+---
+apiVersion: apps/v1
+kind: DaemonSet
+metadata:
+  name: promtail
+  namespace: observability
+  labels:
+    app: promtail
+spec:
+  selector:
+    matchLabels:
+      app: promtail
+  template:
+    metadata:
+      labels:
+        app: promtail
+    spec:
+      serviceAccountName: promtail
+      containers:
+        - name: promtail
+          image: grafana/promtail:3.1.1
+          imagePullPolicy: IfNotPresent
+          args:
+            - -config.file=/etc/promtail/promtail.yml
+          volumeMounts:
+            - name: config
+              mountPath: /etc/promtail/promtail.yml
+              subPath: promtail.yml
+            - name: run
+              mountPath: /run/promtail
+            - name: varlog
+              mountPath: /var/log
+              readOnly: true
+      volumes:
+        - name: config
+          configMap:
+            name: promtail-config
+        - name: run
+          emptyDir: {}
+        - name: varlog
+          hostPath:
+            path: /var/log
+            type: Directory
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: observability-ingress
+  namespace: observability
+spec:
+  ingressClassName: nginx
+  rules:
+    - host: grafana.cloud-demo.local
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: grafana
+                port:
+                  number: 3000
+    - host: prometheus.cloud-demo.local
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: prometheus
+                port:
+                  number: 9090

@@ -1,15 +1,11 @@
-﻿# 验收清单
+# 验收清单
 
-## 基础环境
+## 本机部署
 
-- [ ] MySQL 已启动
+- [ ] MySQL 已启动并执行 `deploy/common/bootstrap-db.sql`
 - [ ] Redis 已启动
 - [ ] Nacos 已启动
 - [ ] MinIO 已启动
-- [ ] `database/init.sql` 已执行
-
-## 后端服务
-
 - [ ] `user-service` 监听 `8100`
 - [ ] `activity-service` 监听 `8200`
 - [ ] `announcement-service` 监听 `8300`
@@ -17,24 +13,36 @@
 - [ ] `gateway-service` 监听 `9000`
 - [ ] `monitor-service` 监听 `9100`
 - [ ] `mcp-service` 监听 `9300`
-- [ ] 以上服务均已注册或接入预期的运行链路
-
-## 前端与 Nginx
-
-- [ ] `frontend/dist` 已通过 `npm run build` 生成
-- [ ] Nginx 已成功加载 `deploy/nginx/cloud-demo.local.conf`
-- [ ] `/api/` 已转发到网关
-- [ ] `/announcement/**` 已通过网关转发到 `announcement-service`
-- [ ] `/feedback/**` 已通过网关转发到 `feedback-service`
-- [ ] `/monitor/` 已转发到监控后台
-- [ ] `/.well-known/*`、`/authorize`、`/token`、`/register`、`/mcp*` 已转发到 `mcp-service`
-
-## 页面访问
-
+- [ ] `frontend2` 可通过 `npm run dev` 访问
+- [ ] Nginx 已加载 `deploy/local/nginx/cloud-demo.local.conf`
 - [ ] `http://localhost/` 可访问
 - [ ] `http://localhost/monitor/` 可访问
 - [ ] `http://localhost/mcp` 未登录时返回 `401 Unauthorized`
-- [ ] `http://localhost:3000` 开发模式可访问
+
+## Docker 单栈部署
+
+- [ ] `docker compose -p cloud-demo -f deploy/docker/docker-compose.yml config` 可正确解析
+- [ ] `powershell -ExecutionPolicy Bypass -File deploy/docker/up.ps1` 可启动
+- [ ] `http://localhost:8081/` 可访问
+- [ ] `http://localhost:8081/monitor/` 可访问
+- [ ] `http://localhost:8081/mcp` 未登录时返回 `401 Unauthorized`
+- [ ] `http://localhost:3000` 可访问 Grafana
+- [ ] `http://localhost:9090` 可访问 Prometheus
+- [ ] `http://localhost:8848/nacos` 可访问 Nacos
+- [ ] `http://localhost:9006` 可访问 MinIO Console
+- [ ] `log/docker/` 下有服务日志
+
+## Kubernetes 部署
+
+- [ ] `deploy/k8s/cloud-demo/secret.yaml` 已从 example 创建
+- [ ] `powershell -ExecutionPolicy Bypass -File deploy/k8s/scripts/apply-all.ps1` 可执行
+- [ ] `powershell -ExecutionPolicy Bypass -File deploy/k8s/scripts/init-db.ps1` 可执行
+- [ ] `kubectl -n cloud-demo get pods` 全部核心 Pod Ready
+- [ ] `kubectl -n observability get pods` 观测 Pod Ready
+- [ ] `kubectl -n cloud-demo get ingress` 有 `cloud-demo.local`
+- [ ] `kubectl -n observability get ingress` 有 Grafana 和 Prometheus host
+- [ ] 本机 hosts 已添加 `cloud-demo.local`
+- [ ] `http://cloud-demo.local:18081/` 可访问
 
 ## 核心用户流程
 
@@ -43,32 +51,14 @@
 - [ ] 活动列表可打开并支持筛选
 - [ ] 活动详情可打开
 - [ ] 首页公告可打开并支持跳转关联活动详情
-- [ ] 公告详情可展示图片、附件和关联活动
 - [ ] 用户可报名活动
 - [ ] 用户可取消未开始活动的报名
-- [ ] 用户可在“我的志愿足迹”查看报名记录
 - [ ] 用户可导出已核销志愿足迹 Excel
 - [ ] 用户可提交意见反馈
-- [ ] 用户可查看“我的反馈”、追加回复、上传附件和关闭反馈
-
-## 管理员流程
-
-- [ ] 管理员可创建活动
-- [ ] 管理员可编辑活动
-- [ ] 管理员可取消活动
-- [ ] 管理员可结项活动
-- [ ] 管理员创建或编辑活动时可上传多张图片
-- [ ] 活动详情页可展示多张图片
-- [ ] 管理员可查看活动报名列表
-- [ ] 管理员可查看当前可签到活动
-- [ ] 管理员可执行签到
-- [ ] 管理员可查看待核销活动
-- [ ] 管理员可核销志愿时长
-- [ ] 管理员可查看志愿时长统计
+- [ ] 管理员可创建、编辑、取消和结项活动
+- [ ] 管理员可签到和核销志愿时长
 - [ ] 管理员可发布、编辑、下线和删除公告
-- [ ] 管理员可上传公告图片、附件并关联多个活动
-- [ ] 管理员可查看反馈工单
-- [ ] 管理员可回复、驳回、关闭反馈并调整优先级
+- [ ] 管理员可处理反馈工单
 
 ## MCP 接入
 
@@ -77,40 +67,4 @@
 - [ ] `codex mcp add cloud-demo --url http://localhost/mcp` 可执行
 - [ ] `codex mcp login cloud-demo` 可完成登录
 - [ ] 普通用户登录后可调用查询类 MCP 工具
-- [ ] 管理员登录后可调用活动管理、签到、核销类 MCP 工具
-- [ ] 普通用户登录后可调用反馈创建、列表、详情、回复、关闭和附件工具
-- [ ] 管理员登录后可调用反馈列表、详情、回复、驳回、关闭和优先级工具
-- [ ] 手动脚本 `scripts/mcp-login.ps1` 可获取并保存 token
-- [ ] 手动脚本 `scripts/mcp-print-token.ps1` 可获取并打印 token
-
-## Docker 部署
-
-- [ ] `docker compose config` 可正确解析
-- [ ] Docker Engine 已启动
-- [ ] `docker compose up -d --build` 可执行
-- [ ] `http://localhost:8081/` 可访问
-- [ ] `http://localhost:8081/monitor/` 可访问
-- [ ] `http://localhost:8081/mcp` 未登录时返回 `401 Unauthorized`
-- [ ] `http://localhost:9001/actuator/health` 返回正常
-- [ ] `http://localhost:9101/actuator/health` 返回正常
-- [ ] `http://localhost:8849/nacos/` 可访问
-- [ ] Docker 页面和接口返回的中文未出现乱码
-
-## Jenkins
-
-- [ ] Jenkins 可成功执行 `mvn -B test`
-- [ ] Jenkins 可成功执行 `docker compose up -d --build`
-- [ ] JUnit 报告可被 `**/target/surefire-reports/*.xml` 正确收集
-
-## 快速排查命令
-
-```powershell
-netstat -ano | findstr :80
-netstat -ano | findstr :9000
-netstat -ano | findstr :9100
-netstat -ano | findstr :9300
-curl http://127.0.0.1/
-curl "http://127.0.0.1:9000/activity/list?page=1&size=10"
-curl http://127.0.0.1:9100/actuator/health
-curl http://127.0.0.1:9300/actuator/health
-```
+- [ ] 管理员登录后可调用管理类 MCP 工具

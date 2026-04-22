@@ -27,21 +27,26 @@ OAuth 相关端点：
 
 ## 2. 启动方式
 
-### Docker Compose
+### Docker 单栈
 
 ```powershell
-docker compose up -d --build
+powershell -ExecutionPolicy Bypass -File deploy/docker/up.ps1
 ```
 
 MCP 地址：
 
 - `http://localhost:8081/mcp`
 
-只重建 MCP 相关组件时可使用：
+如果已经整套环境启动完毕，只重建 `mcp-service` 时可使用：
 
 ```powershell
-docker compose up -d --build mcp-service frontend
+docker compose -p cloud-demo -f deploy/docker/docker-compose.yml up -d --build mcp-service
 ```
+
+说明：
+
+- `mcp-service` 默认上游业务网关是 `http://gateway-service:9000`
+- 运行期日志位于 `log/docker/mcp-service/debug.log`
 
 ### 本机 Java + 本机 Nginx
 
@@ -92,6 +97,15 @@ curl.exe -i "http://localhost:8081/mcp"
 - 响应头包含 `WWW-Authenticate`
 
 这说明 MCP 保护与 OAuth 引导已生效。
+
+### Streamable HTTP 调试提醒
+
+手动调试 `/mcp` 时建议注意两点：
+
+1. `Accept` 建议同时带上 `text/event-stream, application/json`
+2. 某些工具失败不会返回顶层 JSON-RPC `error`，而是返回 `HTTP 200 + result.isError=true`
+
+也就是说，客户端或调试脚本除了检查 HTTP 状态码，还需要检查返回体中的 `result.isError`。
 
 ### 辅助登录接口
 
@@ -376,7 +390,7 @@ curl.exe "http://localhost:8081/.well-known/oauth-authorization-server"
 若返回里缺少 `:8081`，说明前端 Nginx 还没加载最新配置，可重建：
 
 ```powershell
-docker compose up -d --build frontend
+docker compose -p cloud-demo -f deploy/docker/docker-compose.yml up -d --build edge-nginx
 ```
 
 ### `/mcp` 返回 401
@@ -416,7 +430,7 @@ Invoke-RestMethod -Method Post -Uri "http://localhost/mcp/auth/login" -ContentTy
 - [services/mcp-service/src/main/java/org/example/mcp/auth/AuthController.java](../../services/mcp-service/src/main/java/org/example/mcp/auth/AuthController.java)
 - [services/mcp-service/src/main/java/org/example/mcp/auth/McpAccessTokenFilter.java](../../services/mcp-service/src/main/java/org/example/mcp/auth/McpAccessTokenFilter.java)
 - [services/mcp-service/src/main/resources/application.properties](../../services/mcp-service/src/main/resources/application.properties)
-- [deploy/nginx/cloud-demo.local.conf](../../deploy/nginx/cloud-demo.local.conf)
-- [frontend/nginx.docker.conf](../../frontend/nginx.docker.conf)
+- [deploy/local/nginx/cloud-demo.local.conf](../../deploy/local/nginx/cloud-demo.local.conf)
+- [frontend2/nginx.docker.conf](../../frontend2/nginx.docker.conf)
 - [scripts/mcp-login.ps1](../../scripts/mcp-login.ps1)
 - [scripts/mcp-print-token.ps1](../../scripts/mcp-print-token.ps1)

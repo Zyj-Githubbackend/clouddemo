@@ -25,6 +25,11 @@
             <version>0.0.1-SNAPSHOT</version>
         </dependency>
         <dependency>
+            <groupId>org.example</groupId>
+            <artifactId>common-messaging</artifactId>
+            <version>0.0.1-SNAPSHOT</version>
+        </dependency>
+        <dependency>
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter-web</artifactId>
         </dependency>
@@ -35,6 +40,18 @@
         <dependency>
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter-actuator</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>io.micrometer</groupId>
+            <artifactId>micrometer-registry-prometheus</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>io.micrometer</groupId>
+            <artifactId>micrometer-tracing-bridge-otel</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>io.opentelemetry</groupId>
+            <artifactId>opentelemetry-exporter-otlp</artifactId>
         </dependency>
         <!-- Password hashing without full Spring Security -->
         <dependency>
@@ -78,6 +95,41 @@
             <artifactId>spring-boot-starter-test</artifactId>
             <scope>test</scope>
         </dependency>
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-testcontainers</artifactId>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.testcontainers</groupId>
+            <artifactId>junit-jupiter</artifactId>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.testcontainers</groupId>
+            <artifactId>mysql</artifactId>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.testcontainers</groupId>
+            <artifactId>rabbitmq</artifactId>
+            <scope>test</scope>
+        </dependency>
     </dependencies>
+
+    <build>
+        <plugins>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-surefire-plugin</artifactId>
+                <configuration>
+                    <environmentVariables>
+                        <PATH>${env.SystemRoot}\System32;${env.SystemRoot};${env.SystemRoot}\System32\WindowsPowerShell\v1.0\</PATH>
+                        <TESTCONTAINERS_DOCKER_CLIENT_STRATEGY>org.testcontainers.dockerclient.NpipeSocketClientProviderStrategy</TESTCONTAINERS_DOCKER_CLIENT_STRATEGY>
+                    </environmentVariables>
+                </configuration>
+            </plugin>
+        </plugins>
+    </build>
 
 </project>

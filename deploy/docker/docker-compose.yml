@@ -1,0 +1,560 @@
+services:
+  mysql:
+    image: ${MYSQL_IMAGE:-public.ecr.aws/docker/library/mysql:8.0}
+    restart: unless-stopped
+    command: --character-set-server=utf8mb4 --collation-server=utf8mb4_unicode_ci --max_connections=${MYSQL_MAX_CONNECTIONS:-500}
+    environment:
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD:-123888}
+    ports:
+      - "${MYSQL_PORT:-3307}:3306"
+    volumes:
+      - mysql-data:/var/lib/mysql
+      - ../common/bootstrap-db.sql:/docker-entrypoint-initdb.d/01-bootstrap.sql:ro
+    healthcheck:
+      test: ["CMD-SHELL", "mysqladmin ping -h 127.0.0.1 -u root -p${MYSQL_ROOT_PASSWORD:-123888} --silent"]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+      start_period: 30s
+    networks:
+      - cloud-demo-net
+
+  db-init:
+    image: ${MYSQL_IMAGE:-public.ecr.aws/docker/library/mysql:8.0}
+    restart: "no"
+    environment:
+      MYSQL_PWD: ${MYSQL_ROOT_PASSWORD:-123888}
+    volumes:
+      - ../common/bootstrap-db.sql:/tmp/bootstrap-db.sql:ro
+    command: >
+      sh -lc "mysql --default-character-set=utf8mb4 -hmysql -uroot < /tmp/bootstrap-db.sql"
+    depends_on:
+      mysql:
+        condition: service_healthy
+    networks:
+      - cloud-demo-net
+
+  redis:
+    image: ${REDIS_IMAGE:-public.ecr.aws/docker/library/redis:7-alpine}
+    restart: unless-stopped
+    command: ["redis-server", "--appendonly", "yes"]
+    ports:
+      - "${REDIS_PORT:-6379}:6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+      start_period: 10s
+    networks:
+      - cloud-demo-net
+
+  nacos:
+    image: ${NACOS_IMAGE:-nacos/nacos-server:v2.4.2}
+    restart: unless-stopped
+    environment:
+      MODE: standalone
+      PREFER_HOST_MODE: hostname
+      JVM_XMS: 256m
+      JVM_XMX: 256m
+    ports:
+      - "${NACOS_PORT:-8848}:8848"
+    healthcheck:
+      test: ["CMD", "curl", "-fsS", "http://127.0.0.1:8848/nacos/actuator/health"]
+      interval: 15s
+      timeout: 5s
+      retries: 20
+      start_period: 40s
+    networks:
+      - cloud-demo-net
+
+  rabbitmq:
+    image: ${RABBITMQ_IMAGE:-rabbitmq:3.13-management-alpine}
+    restart: unless-stopped
+    environment:
+      RABBITMQ_DEFAULT_USER: ${SPRING_RABBITMQ_USERNAME:-guest}
+      RABBITMQ_DEFAULT_PASS: ${SPRING_RABBITMQ_PASSWORD:-guest}
+    ports:
+      - "${RABBITMQ_PORT:-5672}:5672"
+      - "${RABBITMQ_MANAGEMENT_PORT:-15672}:15672"
+    healthcheck:
+      test: ["CMD", "rabbitmq-diagnostics", "-q", "ping"]
+      interval: 15s
+      timeout: 5s
+      retries: 20
+      start_period: 30s
+    networks:
+      - cloud-demo-net
+
+  minio:
+    image: ${MINIO_IMAGE:-quay.io/minio/minio:latest}
+    restart: unless-stopped
+    command: server /data --console-address ":9001"
+    environment:
+      MINIO_ROOT_USER: ${MINIO_ACCESS_KEY:-root}
+      MINIO_ROOT_PASSWORD: ${MINIO_SECRET_KEY:-12345678}
+    ports:
+      - "${MINIO_API_PORT:-9005}:9000"
+      - "${MINIO_CONSOLE_PORT:-9006}:9001"
+    volumes:
+      - minio-data:/data
+    healthcheck:
+      test: ["CMD", "curl", "-fsS", "http://127.0.0.1:9000/minio/health/live"]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+      start_period: 20s
+    networks:
+      - cloud-demo-net
+
+  otel-collector:
+    image: ${OTEL_COLLECTOR_IMAGE:-otel/opentelemetry-collector-contrib:0.108.0}
+    restart: unless-stopped
+    command: ["--config=/etc/otelcol-contrib/config.yaml"]
+    volumes:
+      - ./observability/otel-collector-config.yml:/etc/otelcol-contrib/config.yaml:ro
+    healthcheck:
+      test: ["CMD", "/otelcol-contrib", "--version"]
+      interval: 15s
+      timeout: 5s
+      retries: 12
+      start_period: 20s
+    networks:
+      - cloud-demo-net
+
+  tempo:
+    image: ${TEMPO_IMAGE:-grafana/tempo:2.6.1}
+    restart: unless-stopped
+    command: ["-config.file=/etc/tempo.yaml"]
+    volumes:
+      - ./observability/tempo.yml:/etc/tempo.yaml:ro
+      - tempo-data:/var/tempo
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://127.0.0.1:3200/ready"]
+      interval: 15s
+      timeout: 5s
+      retries: 12
+      start_period: 20s
+    networks:
+      - cloud-demo-net
+
+  loki:
+    image: ${LOKI_IMAGE:-grafana/loki:3.1.1}
+    restart: unless-stopped
+    command: ["-config.file=/etc/loki/local-config.yaml"]
+    volumes:
+      - ./observability/loki-config.yml:/etc/loki/local-config.yaml:ro
+      - loki-data:/loki
+    networks:
+      - cloud-demo-net
+
+  promtail:
+    image: ${PROMTAIL_IMAGE:-grafana/promtail:3.1.1}
+    restart: unless-stopped
+    user: "0:0"
+    command: ["-config.file=/etc/promtail/config.yml"]
+    volumes:
+      - ./observability/promtail-config.yml:/etc/promtail/config.yml:ro
+      - ../../log:/var/log/cloud-demo:ro
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+      - promtail-positions:/var/lib/promtail
+    depends_on:
+      loki:
+        condition: service_started
+    networks:
+      - cloud-demo-net
+
+  prometheus:
+    image: ${PROMETHEUS_IMAGE:-prom/prometheus:v2.54.1}
+    restart: unless-stopped
+    user: "0:0"
+    command:
+      - --config.file=/etc/prometheus/prometheus.yml
+      - --storage.tsdb.path=/prometheus
+      - --web.enable-lifecycle
+    ports:
+      - "${PROMETHEUS_PORT:-9090}:9090"
+    volumes:
+      - ./observability/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - prometheus-data:/prometheus
+    depends_on:
+      otel-collector:
+        condition: service_started
+    networks:
+      - cloud-demo-net
+
+  grafana:
+    image: ${GRAFANA_IMAGE:-grafana/grafana:11.2.0}
+    restart: unless-stopped
+    environment:
+      GF_SECURITY_ADMIN_USER: ${GRAFANA_ADMIN_USER:-admin}
+      GF_SECURITY_ADMIN_PASSWORD: ${GRAFANA_ADMIN_PASSWORD:-admin}
+      GF_USERS_ALLOW_SIGN_UP: "false"
+    ports:
+      - "${GRAFANA_PORT:-3000}:3000"
+    volumes:
+      - grafana-data:/var/lib/grafana
+      - ./observability/grafana/provisioning:/etc/grafana/provisioning:ro
+    depends_on:
+      prometheus:
+        condition: service_started
+      loki:
+        condition: service_started
+      tempo:
+        condition: service_started
+    networks:
+      - cloud-demo-net
+
+  user-service:
+    build:
+      context: ../..
+      dockerfile: services/user-service/Dockerfile
+      args:
+        MAVEN_IMAGE: ${MAVEN_IMAGE:-public.ecr.aws/docker/library/maven:3.9.9-eclipse-temurin-17}
+        RUNTIME_IMAGE: ${JAVA_RUNTIME_IMAGE:-public.ecr.aws/docker/library/eclipse-temurin:17-jre}
+    restart: unless-stopped
+    environment:
+      APP_LOG_FILE: /app/logs/debug.log
+      TZ: Asia/Shanghai
+      JAVA_TOOL_OPTIONS: -Duser.timezone=Asia/Shanghai
+      SERVICE_NAME: user-service
+      USER_SERVICE_NAME: user-service
+      NACOS_SERVER_ADDR: nacos:8848
+      SPRING_DATASOURCE_URL: ${USER_SERVICE_DB_URL:-jdbc:mysql://mysql:3306/user_service_db?useUnicode=true&characterEncoding=utf-8&useSSL=false&serverTimezone=Asia/Shanghai&allowPublicKeyRetrieval=true}
+      SPRING_DATASOURCE_USERNAME: ${USER_SERVICE_DB_USERNAME:-user_service}
+      SPRING_DATASOURCE_PASSWORD: ${USER_SERVICE_DB_PASSWORD:-123888}
+      JWT_SECRET: ${JWT_SECRET:-volunteerPlatformSecretKey2024}
+      JWT_EXPIRATION: ${JWT_EXPIRATION:-86400000}
+      RABBITMQ_HOST: rabbitmq
+      SPRING_RABBITMQ_HOST: rabbitmq
+      SPRING_RABBITMQ_PORT: ${SPRING_RABBITMQ_PORT:-5672}
+      SPRING_RABBITMQ_USERNAME: ${SPRING_RABBITMQ_USERNAME:-guest}
+      SPRING_RABBITMQ_PASSWORD: ${SPRING_RABBITMQ_PASSWORD:-guest}
+      MANAGEMENT_ENDPOINT_HEALTH_PROBES_ENABLED: "true"
+    volumes:
+      - ../../log/docker/user-service:/app/logs
+    depends_on:
+      db-init:
+        condition: service_completed_successfully
+      nacos:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "curl", "-fsS", "http://127.0.0.1:8100/actuator/health"]
+      interval: 15s
+      timeout: 5s
+      retries: 15
+      start_period: 40s
+    networks:
+      - cloud-demo-net
+
+  activity-service:
+    build:
+      context: ../..
+      dockerfile: services/activity-service/Dockerfile
+      args:
+        MAVEN_IMAGE: ${MAVEN_IMAGE:-public.ecr.aws/docker/library/maven:3.9.9-eclipse-temurin-17}
+        RUNTIME_IMAGE: ${JAVA_RUNTIME_IMAGE:-public.ecr.aws/docker/library/eclipse-temurin:17-jre}
+    restart: unless-stopped
+    environment:
+      APP_LOG_FILE: /app/logs/debug.log
+      TZ: Asia/Shanghai
+      JAVA_TOOL_OPTIONS: -Duser.timezone=Asia/Shanghai
+      SERVICE_NAME: activity-service
+      ACTIVITY_SERVICE_NAME: activity-service
+      USER_SERVICE_NAME: user-service
+      NACOS_SERVER_ADDR: nacos:8848
+      SPRING_DATASOURCE_URL: ${ACTIVITY_SERVICE_DB_URL:-jdbc:mysql://mysql:3306/activity_service_db?useUnicode=true&characterEncoding=utf-8&useSSL=false&serverTimezone=Asia/Shanghai&allowPublicKeyRetrieval=true}
+      SPRING_DATASOURCE_USERNAME: ${ACTIVITY_SERVICE_DB_USERNAME:-activity_service}
+      SPRING_DATASOURCE_PASSWORD: ${ACTIVITY_SERVICE_DB_PASSWORD:-123888}
+      SPRING_DATA_REDIS_HOST: redis
+      SPRING_DATA_REDIS_PORT: ${SPRING_DATA_REDIS_PORT:-6379}
+      RABBITMQ_HOST: rabbitmq
+      SPRING_RABBITMQ_HOST: rabbitmq
+      SPRING_RABBITMQ_PORT: ${SPRING_RABBITMQ_PORT:-5672}
+      SPRING_RABBITMQ_USERNAME: ${SPRING_RABBITMQ_USERNAME:-guest}
+      SPRING_RABBITMQ_PASSWORD: ${SPRING_RABBITMQ_PASSWORD:-guest}
+      DEEPSEEK_API_KEY: ${DEEPSEEK_API_KEY:-}
+      MINIO_ENDPOINT: http://minio:9000
+      MINIO_ACCESS_KEY: ${MINIO_ACCESS_KEY:-root}
+      MINIO_SECRET_KEY: ${MINIO_SECRET_KEY:-12345678}
+      MINIO_BUCKET: ${MINIO_BUCKET:-activity-images}
+      MINIO_PUBLIC_BASE_URL: ${MINIO_PUBLIC_BASE_URL:-/api}
+      MANAGEMENT_ENDPOINT_HEALTH_PROBES_ENABLED: "true"
+    volumes:
+      - ../../log/docker/activity-service:/app/logs
+    depends_on:
+      db-init:
+        condition: service_completed_successfully
+      redis:
+        condition: service_healthy
+      minio:
+        condition: service_healthy
+      nacos:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "curl", "-fsS", "http://127.0.0.1:8200/actuator/health"]
+      interval: 15s
+      timeout: 5s
+      retries: 15
+      start_period: 40s
+    networks:
+      - cloud-demo-net
+
+  announcement-service:
+    build:
+      context: ../..
+      dockerfile: services/announcement-service/Dockerfile
+      args:
+        MAVEN_IMAGE: ${MAVEN_IMAGE:-public.ecr.aws/docker/library/maven:3.9.9-eclipse-temurin-17}
+        RUNTIME_IMAGE: ${JAVA_RUNTIME_IMAGE:-public.ecr.aws/docker/library/eclipse-temurin:17-jre}
+    restart: unless-stopped
+    environment:
+      APP_LOG_FILE: /app/logs/debug.log
+      TZ: Asia/Shanghai
+      JAVA_TOOL_OPTIONS: -Duser.timezone=Asia/Shanghai
+      SERVICE_NAME: announcement-service
+      ANNOUNCEMENT_SERVICE_NAME: announcement-service
+      NACOS_SERVER_ADDR: nacos:8848
+      SPRING_DATASOURCE_URL: ${ANNOUNCEMENT_SERVICE_DB_URL:-jdbc:mysql://mysql:3306/announcement_service_db?useUnicode=true&characterEncoding=utf-8&useSSL=false&serverTimezone=Asia/Shanghai&allowPublicKeyRetrieval=true}
+      SPRING_DATASOURCE_USERNAME: ${ANNOUNCEMENT_SERVICE_DB_USERNAME:-announcement_service}
+      SPRING_DATASOURCE_PASSWORD: ${ANNOUNCEMENT_SERVICE_DB_PASSWORD:-123888}
+      RABBITMQ_HOST: rabbitmq
+      SPRING_RABBITMQ_HOST: rabbitmq
+      SPRING_RABBITMQ_PORT: ${SPRING_RABBITMQ_PORT:-5672}
+      SPRING_RABBITMQ_USERNAME: ${SPRING_RABBITMQ_USERNAME:-guest}
+      SPRING_RABBITMQ_PASSWORD: ${SPRING_RABBITMQ_PASSWORD:-guest}
+      MINIO_ENDPOINT: http://minio:9000
+      MINIO_ACCESS_KEY: ${MINIO_ACCESS_KEY:-root}
+      MINIO_SECRET_KEY: ${MINIO_SECRET_KEY:-12345678}
+      MINIO_BUCKET: ${MINIO_BUCKET:-activity-images}
+      MINIO_PUBLIC_BASE_URL: ${MINIO_PUBLIC_BASE_URL:-/api}
+      MANAGEMENT_ENDPOINT_HEALTH_PROBES_ENABLED: "true"
+    volumes:
+      - ../../log/docker/announcement-service:/app/logs
+    depends_on:
+      db-init:
+        condition: service_completed_successfully
+      minio:
+        condition: service_healthy
+      nacos:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "curl", "-fsS", "http://127.0.0.1:8300/actuator/health"]
+      interval: 15s
+      timeout: 5s
+      retries: 15
+      start_period: 40s
+    networks:
+      - cloud-demo-net
+
+  feedback-service:
+    build:
+      context: ../..
+      dockerfile: services/feedback-service/Dockerfile
+      args:
+        MAVEN_IMAGE: ${MAVEN_IMAGE:-public.ecr.aws/docker/library/maven:3.9.9-eclipse-temurin-17}
+        RUNTIME_IMAGE: ${JAVA_RUNTIME_IMAGE:-public.ecr.aws/docker/library/eclipse-temurin:17-jre}
+    restart: unless-stopped
+    environment:
+      APP_LOG_FILE: /app/logs/debug.log
+      TZ: Asia/Shanghai
+      JAVA_TOOL_OPTIONS: -Duser.timezone=Asia/Shanghai
+      SERVICE_NAME: feedback-service
+      FEEDBACK_SERVICE_NAME: feedback-service
+      NACOS_SERVER_ADDR: nacos:8848
+      SPRING_DATASOURCE_URL: ${FEEDBACK_SERVICE_DB_URL:-jdbc:mysql://mysql:3306/feedback_service_db?useUnicode=true&characterEncoding=utf-8&useSSL=false&serverTimezone=Asia/Shanghai&allowPublicKeyRetrieval=true}
+      SPRING_DATASOURCE_USERNAME: ${FEEDBACK_SERVICE_DB_USERNAME:-feedback_service}
+      SPRING_DATASOURCE_PASSWORD: ${FEEDBACK_SERVICE_DB_PASSWORD:-123888}
+      RABBITMQ_HOST: rabbitmq
+      SPRING_RABBITMQ_HOST: rabbitmq
+      SPRING_RABBITMQ_PORT: ${SPRING_RABBITMQ_PORT:-5672}
+      SPRING_RABBITMQ_USERNAME: ${SPRING_RABBITMQ_USERNAME:-guest}
+      SPRING_RABBITMQ_PASSWORD: ${SPRING_RABBITMQ_PASSWORD:-guest}
+      MINIO_ENDPOINT: http://minio:9000
+      MINIO_ACCESS_KEY: ${MINIO_ACCESS_KEY:-root}
+      MINIO_SECRET_KEY: ${MINIO_SECRET_KEY:-12345678}
+      MINIO_BUCKET: ${MINIO_BUCKET:-activity-images}
+      MINIO_PUBLIC_BASE_URL: ${MINIO_PUBLIC_BASE_URL:-/api}
+      MANAGEMENT_ENDPOINT_HEALTH_PROBES_ENABLED: "true"
+    volumes:
+      - ../../log/docker/feedback-service:/app/logs
+    depends_on:
+      db-init:
+        condition: service_completed_successfully
+      minio:
+        condition: service_healthy
+      nacos:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "curl", "-fsS", "http://127.0.0.1:8400/actuator/health"]
+      interval: 15s
+      timeout: 5s
+      retries: 15
+      start_period: 40s
+    networks:
+      - cloud-demo-net
+
+  monitor-service:
+    build:
+      context: ../..
+      dockerfile: services/monitor-service/Dockerfile
+      args:
+        MAVEN_IMAGE: ${MAVEN_IMAGE:-public.ecr.aws/docker/library/maven:3.9.9-eclipse-temurin-17}
+        RUNTIME_IMAGE: ${JAVA_RUNTIME_IMAGE:-public.ecr.aws/docker/library/eclipse-temurin:17-jre}
+    restart: unless-stopped
+    environment:
+      APP_LOG_FILE: /app/logs/debug.log
+      TZ: Asia/Shanghai
+      JAVA_TOOL_OPTIONS: -Duser.timezone=Asia/Shanghai
+      SERVICE_NAME: monitor-service
+      NACOS_SERVER_ADDR: nacos:8848
+      MANAGEMENT_ENDPOINT_HEALTH_PROBES_ENABLED: "true"
+    volumes:
+      - ../../log/docker/monitor-service:/app/logs
+    depends_on:
+      nacos:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "curl", "-fsS", "http://127.0.0.1:9100/actuator/health"]
+      interval: 15s
+      timeout: 5s
+      retries: 15
+      start_period: 40s
+    networks:
+      - cloud-demo-net
+
+  gateway-service:
+    build:
+      context: ../..
+      dockerfile: services/gateway-service/Dockerfile
+      args:
+        MAVEN_IMAGE: ${MAVEN_IMAGE:-public.ecr.aws/docker/library/maven:3.9.9-eclipse-temurin-17}
+        RUNTIME_IMAGE: ${JAVA_RUNTIME_IMAGE:-public.ecr.aws/docker/library/eclipse-temurin:17-jre}
+    restart: unless-stopped
+    environment:
+      APP_LOG_FILE: /app/logs/debug.log
+      TZ: Asia/Shanghai
+      JAVA_TOOL_OPTIONS: -Duser.timezone=Asia/Shanghai
+      SERVICE_NAME: gateway-service
+      GATEWAY_NAME: gateway-service
+      USER_SERVICE_NAME: user-service
+      ACTIVITY_SERVICE_NAME: activity-service
+      ANNOUNCEMENT_SERVICE_NAME: announcement-service
+      FEEDBACK_SERVICE_NAME: feedback-service
+      NACOS_SERVER_ADDR: nacos:8848
+      JWT_SECRET: ${JWT_SECRET:-volunteerPlatformSecretKey2024}
+      JWT_EXPIRATION: ${JWT_EXPIRATION:-86400000}
+      SPRING_DATA_REDIS_HOST: redis
+      SPRING_DATA_REDIS_PORT: ${SPRING_DATA_REDIS_PORT:-6379}
+      MANAGEMENT_ENDPOINT_HEALTH_PROBES_ENABLED: "true"
+    volumes:
+      - ../../log/docker/gateway-service:/app/logs
+    depends_on:
+      redis:
+        condition: service_healthy
+      nacos:
+        condition: service_healthy
+      user-service:
+        condition: service_healthy
+      activity-service:
+        condition: service_healthy
+      announcement-service:
+        condition: service_healthy
+      feedback-service:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "curl", "-fsS", "http://127.0.0.1:9000/actuator/health"]
+      interval: 15s
+      timeout: 5s
+      retries: 15
+      start_period: 40s
+    networks:
+      - cloud-demo-net
+
+  mcp-service:
+    build:
+      context: ../..
+      dockerfile: services/mcp-service/Dockerfile
+      args:
+        MAVEN_IMAGE: ${MAVEN_IMAGE:-public.ecr.aws/docker/library/maven:3.9.9-eclipse-temurin-17}
+        RUNTIME_IMAGE: ${JAVA_RUNTIME_IMAGE:-public.ecr.aws/docker/library/eclipse-temurin:17-jre}
+    restart: unless-stopped
+    environment:
+      APP_LOG_FILE: /app/logs/debug.log
+      TZ: Asia/Shanghai
+      JAVA_TOOL_OPTIONS: -Duser.timezone=Asia/Shanghai
+      SERVICE_NAME: mcp-service
+      MONITOR_SERVICE_URL: http://monitor-service:9100
+      MCP_SERVICE_BASE_URL: http://mcp-service:9300
+      CLOUD_DEMO_API_BASE_URL: http://gateway-service:9000
+      CLOUD_DEMO_JWT_SECRET: ${CLOUD_DEMO_JWT_SECRET:-volunteerPlatformSecretKey2024ForJWTTokenGeneration}
+      SPRING_DATA_REDIS_HOST: redis
+      SPRING_DATA_REDIS_PORT: ${SPRING_DATA_REDIS_PORT:-6379}
+      SPRING_DATA_REDIS_PASSWORD: ${SPRING_DATA_REDIS_PASSWORD:-}
+      MANAGEMENT_ENDPOINT_HEALTH_PROBES_ENABLED: "true"
+    volumes:
+      - ../../log/docker/mcp-service:/app/logs
+    depends_on:
+      redis:
+        condition: service_healthy
+      monitor-service:
+        condition: service_healthy
+      gateway-service:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "curl", "-fsS", "http://127.0.0.1:9300/actuator/health"]
+      interval: 15s
+      timeout: 5s
+      retries: 15
+      start_period: 40s
+    networks:
+      - cloud-demo-net
+
+  edge-nginx:
+    build:
+      context: ../..
+      dockerfile: deploy/docker/edge-nginx/Dockerfile
+      args:
+        NODE_IMAGE: ${NODE_IMAGE:-public.ecr.aws/docker/library/node:20-alpine}
+        NGINX_IMAGE: ${NGINX_IMAGE:-public.ecr.aws/docker/library/nginx:1.27-alpine}
+    restart: unless-stopped
+    ports:
+      - "${EDGE_HTTP_PORT:-8081}:80"
+    volumes:
+      - ../../log/docker/edge-nginx:/var/log/nginx
+    depends_on:
+      gateway-service:
+        condition: service_healthy
+      monitor-service:
+        condition: service_healthy
+      mcp-service:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "wget", "-q", "-O", "/dev/null", "http://127.0.0.1/healthz"]
+      interval: 15s
+      timeout: 5s
+      retries: 12
+      start_period: 20s
+    networks:
+      - cloud-demo-net
+
+networks:
+  cloud-demo-net:
+    name: cloud-demo-net
+
+volumes:
+  mysql-data:
+  minio-data:
+  tempo-data:
+  loki-data:
+  prometheus-data:
+  grafana-data:
+  promtail-positions:

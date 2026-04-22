@@ -1,4 +1,4 @@
-﻿# 校园志愿服务管理平台
+# 校园志愿服务管理平台
 
 基于 Spring Boot 3、Spring Cloud Alibaba、Vue 3、Nginx 与 MySQL 的校园志愿服务管理平台，支持志愿活动发布、报名、签到、时长核销、活动图片管理、公告管理、意见反馈工单、个人志愿足迹导出，以及通过独立 `mcp-service` 对外暴露 MCP 能力。
 
@@ -13,172 +13,115 @@
 - 监控服务：`monitor-service`，端口 `9100`
 - MCP 服务：`mcp-service`，端口 `9300`
 - 注册中心：Nacos，端口 `8848`
-- 数据库：MySQL，库名 `volunteer_platform`
+- 数据库：MySQL
 - 缓存：Redis
 - 图片存储：MinIO
 
-当前版本的重点能力：
+## 2. 当前部署形态
 
-- 活动支持多图上传、编辑和详情轮播展示
-- 公告支持独立微服务、首页展示、图片上传、附件上传和多活动关联
-- 意见反馈支持用户提交、追加回复、附件上传、关闭工单，以及管理员回复、驳回、关闭和优先级调整
-- 用户可在“我的志愿足迹”页面取消未开始活动的报名
-- 用户可导出本人已核销志愿时长及对应活动明细 Excel
-- 管理员可进行活动创建、编辑、取消、结项、签到、时长核销
-- 独立 `mcp-service` 支持 OAuth 授权码登录与 Streamable HTTP MCP 接入，工具覆盖活动、用户、公告和意见反馈场景
+本项目现在只保留三种部署方式：
 
-## 2. 仓库结构
+| 方式 | 目录 | 说明 |
+| --- | --- | --- |
+| 本机部署 | `deploy/local` | 本机运行 MySQL、Redis、Nacos、MinIO、后端服务和前端，Nginx 做统一入口 |
+| Docker 单栈 | `docker-compose.yml` / `deploy/docker` | 默认部署方式，每个服务一个容器，适合单机快速运行 |
+| Kubernetes | `deploy/k8s` | 业务服务多副本 Deployment，中间件 StatefulSet + PVC，Ingress Controller 统一入口 |
 
-源码与文档主要分布如下：
+旧的多栈 Compose、蓝绿分流和 Compose 拆分文件已经移除；根目录仅保留默认单机入口 `docker-compose.yml`。
+
+## 3. 仓库结构
 
 - `services/`：后端 Maven 聚合工程
-- `frontend/`：Vue 3 前端工程
-- `database/init.sql`：数据库初始化与示例数据
-- `database/migrations/`：已有数据库的增量升级脚本
-- `deploy/nginx/cloud-demo.local.conf`：本机 Nginx 配置
-- `docker-compose.yml`：整套容器部署方案
+- `frontend2/`：Vue 3 前端工程
+- `deploy/local/`：本机部署配置
+- `docker-compose.yml`：默认 Docker 单栈入口
+- `deploy/docker/`：Docker 单栈部署配置
+- `deploy/k8s/`：Kubernetes 部署配置
+- `deploy/common/`：部署共用资源，例如 `bootstrap-db.sql`
 - `docs/`：分主题文档中心
-- `scripts/mcp-login.ps1`：MCP 手动 token 登录并写入环境变量的辅助脚本
-- `scripts/mcp-print-token.ps1`：MCP 手动 token 获取并打印的辅助脚本
 
-另外，仓库根目录下的 `user-service/`、`activity-service/`、`announcement-service/`、`feedback-service/`、`gateway-service/`、`monitor-service/`、`mcp-service/` 目录当前用于保存运行日志，不是源码目录。
-
-## 3. 本机运行摘要
-
-### 3.1 初始化数据库
+## 4. 本机运行摘要
 
 ```bash
-mysql -u root -p < database/init.sql
-```
-
-注意：
-
-- `database/init.sql` 会先执行 `DROP DATABASE IF EXISTS volunteer_platform`
-- 脚本会初始化默认账号、20 条活动数据以及报名记录
-- 种子数据围绕 `2026-03-25` 设计，因此不同日期运行时，活动“招募中/未开始/已结束/进行中”的展示会随当前时间动态变化
-- 已有数据库可按需执行 `database/migrations/20260411_add_announcement.sql` 与 `database/migrations/20260411_add_feedback.sql` 补建新表
-
-### 3.2 启动基础设施
-
-- Redis
-- Nacos
-- MinIO
-
-`activity-service`、`announcement-service` 和 `feedback-service` 默认使用以下 MinIO 配置，本机不改端口时通常无需额外配置：
-
-```powershell
-$env:MINIO_ENDPOINT="http://127.0.0.1:9005"
-$env:MINIO_ACCESS_KEY="root"
-$env:MINIO_SECRET_KEY="12345678"
-$env:MINIO_BUCKET="activity-images"
-```
-
-### 3.3 编译并启动后端
-
-```bash
+mysql -u root -p < deploy/common/bootstrap-db.sql
 mvn clean install -DskipTests
-```
-
-启动顺序建议：
-
-1. `UserApplication`
-2. `ActivityApplication`
-3. `AnnouncementApplication`
-4. `FeedbackApplication`
-5. `GatewayApplication`
-6. `MonitorApplication`
-7. `McpApplication`
-
-### 3.4 启动前端
-
-开发模式：
-
-```bash
-cd frontend
+cd frontend2
 npm install
 npm run dev
 ```
 
-生产构建：
+生产静态资源模式可使用：
 
-```bash
-cd frontend
-npm install
-npm run build
-```
+- `deploy/local/nginx/cloud-demo.local.conf`
 
-## 4. 访问地址
+访问：
 
-### 4.1 本机 Nginx 模式
-
-- 前台：`http://localhost/`
+- 前端开发模式：`http://localhost:3000`
+- 本机 Nginx 模式：`http://localhost/`
 - 监控后台：`http://localhost/monitor/`
 - MCP：`http://localhost/mcp`
-- 开发模式前端：`http://localhost:3000`
 
-Nginx 路由约定：
+## 5. Docker 单栈运行摘要
 
-- `/` -> `frontend/dist`
-- `/api/` -> `http://127.0.0.1:9000/`
-- `/monitor/` -> `http://127.0.0.1:9100/`
-- `/.well-known/*`、`/authorize`、`/token`、`/register`、`/mcp*` -> `http://127.0.0.1:9300`
-
-### 4.2 Docker Compose 模式
-
-启动命令：
-
-```bash
+```powershell
+Copy-Item .env.example .env
 docker compose up -d --build
 ```
 
-默认访问地址：
+```bash
+cp .env.example .env
+docker compose up -d --build
+```
+
+访问：
 
 - 前台：`http://localhost:8081/`
 - 监控后台：`http://localhost:8081/monitor/`
 - MCP：`http://localhost:8081/mcp`
-- 网关直连：`http://localhost:9001`
-- 监控直连：`http://localhost:9101`
-- Nacos：`http://localhost:8849/nacos`
-- MinIO API：`http://localhost:9007`
-- MinIO 控制台：`http://localhost:9008`
+- Grafana：`http://localhost:3000`
+- Prometheus：`http://localhost:9090`
+- Nacos：`http://localhost:8848/nacos`
+- MinIO Console：`http://localhost:9006`
 
-## 5. MCP 接入摘要
-
-`services/mcp-service` 提供独立 MCP Server，协议为 Streamable HTTP。
-
-推荐连接方式：
+关闭：
 
 ```powershell
-codex mcp add cloud-demo --url http://localhost/mcp
-codex mcp login cloud-demo
+docker compose down
 ```
 
-Docker 模式下把地址换成：
+## 6. Kubernetes 运行摘要
 
 ```powershell
-codex mcp add cloud-demo --url http://localhost:8081/mcp
-codex mcp login cloud-demo
+powershell -ExecutionPolicy Bypass -File deploy\k8s\scripts\apply-all.ps1
+powershell -ExecutionPolicy Bypass -File deploy\k8s\scripts\init-db.ps1
 ```
 
-当前文档已覆盖：
+本机 Docker Desktop 访问：
 
-- OAuth 元数据验证
-- `codex mcp add` / `codex mcp login`
-- 手动 token 备用方案
-- 用户工具与管理员工具清单
+```powershell
+kubectl -n ingress-nginx port-forward svc/ingress-nginx-controller 18081:80
+```
 
-详见 [docs/mcp/MCP_CONNECTION.md](docs/mcp/MCP_CONNECTION.md)。
+hosts 增加：
 
-## 6. 默认测试账号
+```text
+127.0.0.1 cloud-demo.local grafana.cloud-demo.local prometheus.cloud-demo.local
+```
 
-`database/init.sql` 内置以下账号，密码均为 `password123`：
+访问：
 
-| 角色 | 用户名 | 说明 |
-|------|------|------|
-| 管理员 | `admin` | 可发布活动、签到、核销时长、查看统计 |
-| 志愿者 | `student01` - `student10` | 用于普通用户流程测试 |
+- `http://cloud-demo.local:18081/`
+- `http://grafana.cloud-demo.local:18081/`
+- `http://prometheus.cloud-demo.local:18081/`
 
-## 7. 文档导航
+## 7. 默认测试账号
+
+| 角色 | 用户名 | 密码 |
+| --- | --- | --- |
+| 管理员 | `admin` | `password123` |
+| 志愿者 | `student01` - `student10` | `password123` |
+
+## 8. 文档导航
 
 - [文档中心](docs/README.md)
 - [快速开始](docs/setup/QUICKSTART.md)
@@ -186,16 +129,7 @@ codex mcp login cloud-demo
 - [架构说明](docs/architecture/ARCHITECTURE.md)
 - [API 测试](docs/testing/API_TEST.md)
 - [MCP 连接说明](docs/mcp/MCP_CONNECTION.md)
+- [可观测栈说明](docs/observability/OBSERVABILITY.md)
 - [目录结构](docs/overview/DIRECTORY_STRUCTURE.md)
+- [技术说明](docs/overview/TECHNOLOGY_STACK.md)
 - [项目交付摘要](docs/overview/PROJECT_SUMMARY.md)
-- [验收清单](docs/setup/CHECKLIST.md)
-- [前端快速启动](docs/frontend/QUICKSTART.md)
-- [前端交付摘要](docs/frontend/PROJECT_COMPLETE.md)
-
-## 8. 推荐阅读顺序
-
-1. `README.md`
-2. [docs/setup/QUICKSTART.md](docs/setup/QUICKSTART.md)
-3. [docs/deploy/DEPLOY.md](docs/deploy/DEPLOY.md)
-4. [docs/testing/API_TEST.md](docs/testing/API_TEST.md)
-5. [docs/mcp/MCP_CONNECTION.md](docs/mcp/MCP_CONNECTION.md)

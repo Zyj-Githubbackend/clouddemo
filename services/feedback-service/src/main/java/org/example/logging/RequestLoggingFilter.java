@@ -22,6 +22,10 @@ public class RequestLoggingFilter extends OncePerRequestFilter {
 
     private static final Logger log = LoggerFactory.getLogger(RequestLoggingFilter.class);
     private static final String TRACE_ID_KEY = "traceId";
+    private static final String STACK_ID_KEY = "stackId";
+    private static final String SERVICE_NAME_KEY = "serviceName";
+    private static final String EVENT_TYPE_KEY = "eventType";
+    private static final String MESSAGE_ID_KEY = "messageId";
     private static final String TRACE_HEADER = "X-Trace-Id";
 
     @Override
@@ -34,8 +38,14 @@ public class RequestLoggingFilter extends OncePerRequestFilter {
             throws ServletException, IOException {
         long startTime = System.currentTimeMillis();
         String traceId = resolveTraceId(request.getHeader(TRACE_HEADER));
+        String stackId = resolveEnv("STACK_ID", "single");
+        String serviceName = resolveEnv("SERVICE_NAME", "feedback-service");
 
         MDC.put(TRACE_ID_KEY, traceId);
+        MDC.put(STACK_ID_KEY, stackId);
+        MDC.put(SERVICE_NAME_KEY, serviceName);
+        MDC.put(EVENT_TYPE_KEY, "http.request");
+        MDC.put(MESSAGE_ID_KEY, traceId);
         response.setHeader(TRACE_HEADER, traceId);
 
         try {
@@ -53,7 +63,16 @@ public class RequestLoggingFilter extends OncePerRequestFilter {
                     request.getRemoteAddr()
             );
             MDC.remove(TRACE_ID_KEY);
+            MDC.remove(STACK_ID_KEY);
+            MDC.remove(SERVICE_NAME_KEY);
+            MDC.remove(EVENT_TYPE_KEY);
+            MDC.remove(MESSAGE_ID_KEY);
         }
+    }
+
+    private String resolveEnv(String key, String defaultValue) {
+        String value = System.getenv(key);
+        return StringUtils.hasText(value) ? value : defaultValue;
     }
 
     private String resolveTraceId(String traceIdHeader) {

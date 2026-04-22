@@ -12,8 +12,10 @@
         <module name="activity-service" />
         <module name="common" />
         <module name="gateway-service" />
+        <module name="common-messaging" />
         <module name="monitor-service" />
         <module name="user-service" />
+        <module name="feedback-service" />
       </profile>
     </annotationProcessing>
     <bytecodeTargetLevel>
@@ -28,6 +30,8 @@
       <module name="announcement-service" options="-parameters" />
       <module name="cloud-demo" options="" />
       <module name="common" options="-parameters" />
+      <module name="common-messaging" options="-parameters" />
+      <module name="feedback-service" options="-parameters" />
       <module name="gateway-service" options="-parameters" />
       <module name="mcp-service" options="-parameters" />
       <module name="monitor-service" options="-parameters" />

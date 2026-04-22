@@ -1,0 +1,42 @@
+server:
+  http_listen_port: 9080
+  grpc_listen_port: 0
+
+positions:
+  filename: /var/lib/promtail/positions.yaml
+
+clients:
+  - url: http://loki:3100/loki/api/v1/push
+    external_labels:
+      cluster: cloud-demo-docker
+
+scrape_configs:
+  - job_name: cloud-demo-containers
+    docker_sd_configs:
+      - host: unix:///var/run/docker.sock
+        refresh_interval: 15s
+    pipeline_stages:
+      - docker: {}
+    relabel_configs:
+      - source_labels: [__meta_docker_container_label_com_docker_compose_project]
+        regex: cloud-demo
+        action: keep
+      - source_labels: [__meta_docker_container_label_com_docker_compose_service]
+        regex: edge-nginx|gateway-service|user-service|activity-service|announcement-service|feedback-service|monitor-service|mcp-service
+        action: keep
+      - source_labels: [__meta_docker_container_name]
+        regex: "/(.*)"
+        target_label: instance
+        replacement: "$1"
+      - source_labels: [__meta_docker_container_label_com_docker_compose_service]
+        target_label: service
+      - source_labels: [__meta_docker_container_log_stream]
+        target_label: stream
+
+  - job_name: cloud-demo-edge-files
+    static_configs:
+      - targets:
+          - localhost
+        labels:
+          service: edge-nginx
+          __path__: /var/log/cloud-demo/docker/edge-nginx/**/*.log
